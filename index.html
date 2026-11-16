@@ -68,6 +68,7 @@
       display: block;
       cursor: crosshair;
       image-rendering: pixelated;
+      touch-action: none;
     }
 
     #world-prompts {
@@ -678,7 +679,7 @@
               <span>صدا</span>
             </button>
           </div>
-          <span class="hint-text">A/D حرکت · E/کلیک بررسی · ماوس چراغ‌قوه</span>
+          <span class="hint-text">لمس هر نقطه: حرکت · E/کلیک: بررسی · ماوس: چراغ‌قوه</span>
         </header>
 
         <!-- Top-Right Quest Notepad -->
@@ -996,8 +997,8 @@
           if (!this.started || this.muted || !this.ctx) return;
           const now = this.ctx.currentTime;
           const osc = this.ctx.createOscillator();
-          const filter = this.ctx.createBiquadFilter();
-          const g = this.ctx.createGain();          osc.type = "triangle";
+          const filter = this.ctx.createBiquadFilter();          const g = this.ctx.createGain();
+          osc.type = "triangle";
           osc.frequency.setValueAtTime(540, now);
           osc.frequency.linearRampToValueAtTime(670, now + 0.07);
           osc.frequency.exponentialRampToValueAtTime(380, now + 0.24);
@@ -1995,8 +1996,8 @@
         }
 
         spawnSnowKick(x, y, dir) {
-          for (let i = 0; i < 4; i++) {
-            this.snowSteps.push({              x: x + (Math.random() - 0.5) * 6,
+          for (let i = 0; i < 4; i++) {            this.snowSteps.push({
+              x: x + (Math.random() - 0.5) * 6,
               y: y - 1,
               vx: -dir * (10 + Math.random() * 14),
               vy: -14 - Math.random() * 14,
@@ -2448,6 +2449,7 @@
               x: 56,
               y: GROUND_Y,
               vx: 0,
+              moveTargetX: null,
               facing: 1,
               aimAngle: -0.15,
               anim: "idle",
@@ -2532,15 +2534,19 @@
             this.keys.delete(e.code);
           });
 
-          this.canvas.addEventListener("mousemove", (e) => {
+          this.canvas.addEventListener("pointermove", (e) => {
             const rect = this.canvas.getBoundingClientRect();
             this.mouseWorld.x = ((e.clientX - rect.left) / rect.width) * WORLD_W;
             this.mouseWorld.y = ((e.clientY - rect.top) / rect.height) * WORLD_H;
           });
 
-          this.canvas.addEventListener("mousedown", (e) => {
+          // Tap/click anywhere in the scene to walk to that horizontal position.
+          // Pointer events support both mouse and mobile touch without extra controls.
+          this.canvas.addEventListener("pointerdown", (e) => {
             unlockAudio();
-            if (e.button !== 0) return;
+            if (e.isPrimary === false || (e.pointerType === "mouse" && e.button !== 0)) return;
+            if (this.state.transitioning || this.state.flags.caseClosed) return;
+            if (this.dialogue.open && this.dialogue.choices && this.dialogue.choices.length > 0) return;
 
             const rect = this.canvas.getBoundingClientRect();
             const wx = ((e.clientX - rect.left) / rect.width) * WORLD_W;
@@ -2548,7 +2554,7 @@
             this.mouseWorld.x = wx;
             this.mouseWorld.y = wy;
 
-            // Check if player clicked on a nearby highlighted hotspot
+            // Keep the existing direct-tap interaction for nearby hotspots.
             const hotspots = getChapterHotspots(this.state.chapter, this.state.flags);
             for (const h of hotspots) {
               const insideBox = Math.abs(wx - h.x) <= h.w * 0.65 && Math.abs(wy - h.y) <= h.h * 0.65;
@@ -2557,6 +2563,14 @@
                 this.interactWith(h);
                 return;
               }
+            }
+
+            // The game is a side-view scene, so taps set the character's X destination.
+            // Preserve the existing exits at the edges of each chapter.
+            if (this.state.chapter === 1) {
+              this.state.detective.moveTargetX = Math.max(54, Math.min(WORLD_W, wx));
+            } else {
+              this.state.detective.moveTargetX = Math.max(0, Math.min(412, wx));
             }
           });
 
@@ -2674,6 +2688,7 @@
         }
 
         interactWith(hotspot) {
+          this.state.detective.moveTargetX = null;
           this.state.detective.anim = "inspect";
           this.state.detective.facing = hotspot.x >= this.state.detective.x ? 1 : -1;
           const script = buildDialogueScript(hotspot.id, this);
@@ -2799,6 +2814,7 @@
 
         transitionToChapter(targetChapter, spawnX) {
           if (this.state.transitioning) return;
+          this.state.detective.moveTargetX = null;
           this.state.transitioning = true;
           this.closeDialogue();
           this.dom.curtainText.textContent =
@@ -2960,18 +2976,39 @@
           // 2. Detective movement (lock movement only when awaiting a choice menu)
           const awaitingChoice = this.dialogue.open && this.dialogue.choices && this.dialogue.choices.length > 0;
           let move = 0;
+          let movingToTap = false;
           if (!this.state.transitioning && !awaitingChoice && !this.state.flags.caseClosed) {
             if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) move -= 1;
             if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) move += 1;
-          }
 
+            // Keyboard movement takes priority; otherwise follow the last tapped point.
+            if (move !== 0) {
+              det.moveTargetX = null;
+            } else if (Number.isFinite(det.moveTargetX)) {
+              const remaining = det.moveTargetX - det.x;
+              if (Math.abs(remaining) <= 1.5) {
+                det.x = det.moveTargetX;
+                det.moveTargetX = null;
+              } else {
+                move = Math.sign(remaining);
+                movingToTap = true;
+              }
+            }
+          }
           if (move !== 0) {
             // Dismiss passive narration smoothly when player starts walking
             if (this.dialogue.open && !this.dialogue.choices && !this.dialogue.typing) {
               this.closeDialogue();
             }
             det.vx = move * 78;
-            det.x += det.vx * dt;
+            const step = det.vx * dt;
+            if (movingToTap && Math.abs(det.moveTargetX - det.x) <= Math.abs(step)) {
+              det.x = det.moveTargetX;
+              det.moveTargetX = null;
+              det.vx = 0;
+            } else {
+              det.x += step;
+            }
             det.anim = "walk";
             det.walkPhase += dt * 11.5;
             det.frame = Math.floor(det.walkPhase) % 6;
@@ -2995,7 +3032,8 @@
             if (det.x >= 456) {
               this.transitionToChapter(2, 38);
             }
-          } else {            if (det.x <= 22) {
+          } else {
+            if (det.x <= 22) {
               this.transitionToChapter(1, 438);
             }
             if (det.x > 412) det.x = 412;
