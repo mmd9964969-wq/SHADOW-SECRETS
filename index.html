@@ -1,0 +1,3121 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>رازهای سایه | Shadow Secrets</title>
+  <style>
+    :root {
+      --bg-void: #040712;
+      --ink-panel: rgba(10, 12, 17, 0.78);
+      --ink-panel-strong: rgba(10, 12, 17, 0.93);
+      --hairline: rgba(214, 194, 158, 0.15);
+      --brass: #c9a66b;
+      --brass-bright: #dfc18a;
+      --brass-border: rgba(201, 166, 107, 0.36);
+      --sage: #7ea88b;
+      --stamp: #b86565;
+      --text-main: #ebe6dc;
+      --text-muted: #8a909c;
+      --font-ui: "Tahoma", "Segoe UI", "Vazirmatn", "IRANSans", "Arial", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #04060d;
+      color: var(--text-main);
+      font-family: var(--font-ui);
+    }
+
+    #app {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #game-stage {
+      position: relative;
+      width: min(100vw, 177.7778vh);
+      height: min(100vh, 56.25vw);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(214, 194, 158, 0.08);
+      overflow: hidden;
+      background: #040712;
+    }
+
+    #canvas-layer {
+      position: absolute;
+      inset: 0;
+      direction: ltr;
+    }
+
+    #gl-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      image-rendering: pixelated;
+    }
+
+    #world-prompts {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      direction: ltr;
+      z-index: 6;
+    }
+
+    .world-prompt {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      direction: rtl;
+      background: rgba(10, 12, 17, 0.9);
+      border: 1px solid rgba(201, 166, 107, 0.48);
+      color: var(--text-main);
+      padding: 3px 9px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+      animation: promptFloat 1.8s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .world-prompt .key-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(201, 166, 107, 0.14);
+      border: 1px solid rgba(201, 166, 107, 0.42);
+      color: var(--brass-bright);
+      border-radius: 2px;
+      padding: 0 4px;
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    @keyframes promptFloat {
+      0%, 100% { transform: translate(-50%, -100%) translateY(0px); }
+      50% { transform: translate(-50%, -100%) translateY(-2px); }
+    }
+
+    /* Scene Transition Curtain */
+    #transition-curtain {
+      position: absolute;
+      inset: 0;
+      background: #04060d;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.36s ease;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      letter-spacing: 0.4px;
+      color: var(--brass);
+    }
+
+    #transition-curtain.active {
+      opacity: 1;
+    }
+
+    /* HUD Minimalist Detective Dossier Overlay */
+    #hud-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 15;
+    }
+
+    .glass-panel {
+      background: var(--ink-panel);
+      border: 1px solid var(--hairline);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-radius: 4px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.52);
+      pointer-events: auto;
+    }
+
+    /* Header Masthead (Top-Left: borderless editorial noir, non-intrusive) */
+    #header-panel {
+      position: absolute;
+      top: 14px;
+      left: 16px;
+      padding: 4px 0 4px 12px;
+      background: transparent;
+      border: none;
+      border-left: 2px solid rgba(201, 166, 107, 0.42);
+      border-radius: 0;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      max-width: 250px;
+      text-shadow: 0 1px 6px rgba(0, 0, 0, 0.95);
+    }
+
+    .title-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .game-title {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: 0.2px;
+    }
+
+    .game-title span.en {
+      color: var(--text-muted);
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+
+    .chapter-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 11px;
+      color: var(--brass);
+    }
+
+    .hud-btn {
+      background: rgba(10, 12, 17, 0.58);
+      border: 1px solid rgba(214, 194, 158, 0.2);
+      color: var(--text-muted);
+      font-family: var(--font-ui);
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .hud-btn:hover {
+      border-color: var(--brass-border);
+      color: var(--text-main);
+      background: rgba(201, 166, 107, 0.12);
+    }
+
+    .hud-btn svg {
+      width: 11px;
+      height: 11px;
+      flex-shrink: 0;
+    }
+
+    .hint-text {
+      font-size: 10px;
+      color: rgba(235, 230, 220, 0.45);
+      letter-spacing: 0.1px;
+    }
+
+    /* Objectives Notepad (Top-Right) */
+    #objectives-panel {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      padding: 8px 12px;
+      min-width: 196px;
+      max-width: 236px;
+      border-color: var(--hairline);
+      border-right: 2px solid rgba(201, 166, 107, 0.52);
+    }
+
+    .panel-heading {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--brass);
+      margin: 0 0 7px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(214, 194, 158, 0.12);
+      padding-bottom: 4px;
+    }
+
+    #objectives-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .obj-item {
+      font-size: 11px;
+      line-height: 1.45;
+      color: var(--text-muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      transition: color 0.2s ease, opacity 0.2s ease;
+    }
+
+    .obj-check {
+      width: 12px;
+      height: 12px;
+      border-radius: 2px;
+      border: 1px solid rgba(201, 166, 107, 0.42);
+      flex-shrink: 0;
+      margin-top: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      color: transparent;
+      background: transparent;
+    }
+
+    .obj-item.done {
+      color: var(--sage);
+      opacity: 0.72;
+    }
+
+    .obj-item.done .obj-text {
+      text-decoration: line-through;
+      text-decoration-color: rgba(126, 168, 139, 0.55);
+    }
+
+    .obj-item.done .obj-check {
+      background: rgba(126, 168, 139, 0.16);
+      border-color: rgba(126, 168, 139, 0.65);
+      color: var(--sage);
+    }
+
+    .obj-item.active {
+      color: var(--text-main);
+      font-weight: 700;
+    }
+
+    .obj-item.active .obj-check {
+      border-color: var(--brass);
+    }
+
+    /* Floating Pixel White Thought Bubble above Character / Cat */
+    #dialogue-panel {
+      position: absolute;
+      transform: translate(-50%, -100%);
+      direction: rtl;
+      width: max-content;
+      min-width: 150px;
+      max-width: 266px;
+      background: #f5f2ea;
+      color: #121622;
+      border: 2px solid #141824;
+      border-radius: 5px;
+      padding: 7px 11px 8px 11px;
+      box-shadow:
+        inset 2px 2px 0 #ffffff,
+        inset -2px -2px 0 #ddd6c5,
+        3px 3px 0 rgba(8, 10, 16, 0.78),
+        0 10px 26px rgba(0, 0, 0, 0.58);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.16s ease;
+      z-index: 20;
+    }
+
+    #dialogue-panel.open {
+      opacity: 1;
+      pointer-events: auto;
+      animation: thoughtPop 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    }
+
+    @keyframes thoughtPop {
+      0% { transform: translate(-50%, -100%) scale(0.92) translateY(4px); }
+      100% { transform: translate(-50%, -100%) scale(1) translateY(0); }
+    }
+
+    #thought-tail {
+      position: absolute;
+      left: 50%;
+      top: calc(100% + 5px);
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      pointer-events: none;
+    }
+
+    #thought-tail .dot-lg {
+      width: 12px;
+      height: 12px;
+      background: #f5f2ea;
+      border: 2px solid #141824;
+      border-radius: 3px;
+      box-shadow: inset 1px 1px 0 #ffffff, 2px 2px 0 rgba(8, 10, 16, 0.78);
+      transform: translateX(-3px);
+    }
+
+    #thought-tail .dot-sm {
+      width: 8px;
+      height: 8px;
+      background: #f5f2ea;
+      border: 2px solid #141824;
+      border-radius: 2px;
+      box-shadow: 1px 1px 0 rgba(8, 10, 16, 0.75);
+      transform: translateX(3px);
+    }
+
+    .dialogue-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 3px;
+    }
+
+    .speaker-tag {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #7c582b;
+      letter-spacing: 0.1px;
+    }
+
+    .dialogue-close-hint {
+      font-size: 9px;
+      color: #6b7280;
+      cursor: pointer;
+    }
+
+    #dialogue-text {
+      margin: 0;
+      font-size: 11.5px;
+      font-weight: 700;
+      line-height: 1.6;
+      color: #141824;
+      cursor: pointer;
+    }
+
+    #dialogue-choices {
+      margin-top: 7px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(20, 24, 36, 0.22);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    #dialogue-choices:empty {
+      display: none;
+    }
+
+    .choice-btn {
+      width: 100%;
+      text-align: right;
+      font-family: var(--font-ui);
+      font-size: 11px;
+      font-weight: 600;
+      color: #f5f2ea;
+      background: #1a2030;
+      border: 1.5px solid #111520;
+      border-radius: 3px;
+      padding: 5px 8px;
+      cursor: pointer;
+      transition: background 0.14s ease, border-color 0.14s ease, transform 0.14s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .choice-btn:hover {
+      background: #2b241d;
+      border-color: #9e7b47;
+      transform: translateX(-1px);
+    }
+
+    .choice-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 14px;
+      color: #e3be82;
+      font-size: 10.5px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* Evidence Tray (Bottom-Center, minimal slim strip) */
+    #inventory-panel {
+      position: absolute;
+      bottom: 9px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: calc(100% - 24px);
+      padding: 4px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(10, 12, 17, 0.76);
+      border-color: rgba(214, 194, 158, 0.14);
+    }
+
+    .inv-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--brass);
+      white-space: nowrap;
+      padding-left: 8px;
+      border-left: 1px solid rgba(214, 194, 158, 0.14);
+    }
+
+    #inventory-slots {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    #inventory-slots::-webkit-scrollbar {
+      display: none;
+    }
+
+    .inv-slot {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 7px;
+      border-radius: 3px;
+      font-size: 10.5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(214, 194, 158, 0.08);
+      color: rgba(235, 230, 220, 0.28);
+      transition: all 0.2s ease;
+    }
+
+    .inv-slot.collected {
+      border-color: rgba(201, 166, 107, 0.36);
+      background: rgba(201, 166, 107, 0.08);
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .inv-slot.collected:hover {
+      border-color: var(--brass-bright);
+      background: rgba(201, 166, 107, 0.16);
+    }
+
+    .inv-icon {
+      width: 13px;
+      height: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brass);
+      flex-shrink: 0;
+    }
+
+    .inv-icon svg {
+      width: 13px;
+      height: 13px;
+    }
+
+    /* Subtle Clue Registration Note */
+    #toast-banner {
+      position: absolute;
+      bottom: 46px;
+      left: 50%;
+      transform: translateX(-50%) translateY(6px);
+      background: rgba(10, 12, 17, 0.92);
+      border: 1px solid rgba(201, 166, 107, 0.42);
+      border-right: 2px solid var(--brass);
+      color: var(--text-main);
+      padding: 5px 12px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.24s ease;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.65);
+      z-index: 22;
+    }
+
+    #toast-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Case Closed Epilogue Dossier Modal */
+    #epilogue-modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 7, 12, 0.8);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      padding: 20px;
+    }
+
+    #epilogue-modal.show {
+      display: flex;
+    }
+
+    .epilogue-card {
+      max-width: 450px;
+      width: 100%;
+      padding: 24px 26px;
+      background: rgba(11, 13, 19, 0.96);
+      border: 1px solid rgba(201, 166, 107, 0.34);
+      border-top: 2px solid var(--brass);
+      border-radius: 4px;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+      text-align: center;
+    }
+
+    .epilogue-badge {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 2px;
+      background: rgba(184, 101, 101, 0.08);
+      border: 1.5px solid rgba(184, 101, 101, 0.65);
+      color: #d48989;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      margin-bottom: 12px;
+      transform: rotate(-1.5deg);
+    }
+
+    .epilogue-card h2 {
+      margin: 0 0 10px 0;
+      font-size: 18px;
+      color: var(--brass-bright);
+      font-weight: 700;
+    }
+
+    .epilogue-card p {
+      margin: 0 0 16px 0;
+      font-size: 12.5px;
+      line-height: 1.85;
+      color: var(--text-main);
+    }
+
+    .epilogue-clues {
+      font-size: 11.5px;
+      color: var(--brass);
+      margin-bottom: 18px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(214, 194, 158, 0.12);
+    }
+
+    .restart-btn {
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 20px;
+      border-radius: 3px;
+      border: 1px solid var(--brass-border);
+      background: rgba(201, 166, 107, 0.12);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .restart-btn:hover {
+      background: rgba(201, 166, 107, 0.24);
+      border-color: var(--brass-bright);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="game-stage">
+      <div id="canvas-layer">
+        <canvas id="gl-canvas" width="960" height="540"></canvas>
+      </div>
+
+      <div id="world-prompts"></div>
+
+      <div id="hud-layer">
+        <!-- Top-Left Minimal Noir Masthead -->
+        <header id="header-panel">
+          <div class="title-row">
+            <h1 class="game-title">رازهای سایه <span class="en">Shadow Secrets</span></h1>
+          </div>
+          <div class="chapter-row">
+            <span id="chapter-label">فصل ۱ · کوچه برفی</span>
+            <button id="audio-btn" class="hud-btn" type="button">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M12 5.5c.8.8.8 4.2 0 5"/></svg>
+              <span>صدا</span>
+            </button>
+          </div>
+          <span class="hint-text">A/D حرکت · E/کلیک بررسی · ماوس چراغ‌قوه</span>
+        </header>
+
+        <!-- Top-Right Quest Notepad -->
+        <aside id="objectives-panel" class="glass-panel">
+          <h2 class="panel-heading">
+            <span>پرونده و اهداف</span>
+            <span id="obj-counter" style="font-size:10.5px;color:#8a909c;">۰ از ۳</span>
+          </h2>
+          <ul id="objectives-list">
+            <li class="obj-item active" data-obj="obj1">
+              <span class="obj-check">✓</span>
+              <span class="obj-text">۱. بررسی محل حادثه</span>
+            </li>
+            <li class="obj-item" data-obj="obj2">
+              <span class="obj-check">✓</span>
+              <span class="obj-text">۲. بازجویی از گربه / بررسی ردپاها</span>
+            </li>
+            <li class="obj-item" data-obj="obj3">
+              <span class="obj-check">✓</span>
+              <span class="obj-text">۳. ورود به مغازه مشکوک</span>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- Floating Pixel White Thought Bubble -->
+        <section id="dialogue-panel" aria-live="polite">
+          <div class="dialogue-header">
+            <span id="dialogue-speaker" class="speaker-tag">کارآگاه مانی</span>
+            <span id="dialogue-action-hint" class="dialogue-close-hint">[Space] ×</span>
+          </div>
+          <p id="dialogue-text"></p>
+          <div id="dialogue-choices"></div>
+          <div id="thought-tail">
+            <span class="dot-lg"></span>
+            <span class="dot-sm"></span>
+          </div>
+        </section>
+
+        <!-- Quiet Evidence Note -->
+        <div id="toast-banner"></div>
+
+        <!-- Bottom Minimal Evidence Strip -->
+        <footer id="inventory-panel" class="glass-panel">
+          <span class="inv-label">مدارک</span>
+          <div id="inventory-slots"></div>
+        </footer>
+      </div>
+
+      <!-- Smooth Scene Transition -->
+      <div id="transition-curtain">
+        <span id="transition-text"></span>
+      </div>
+
+      <!-- Case Closed Modal -->
+      <div id="epilogue-modal">
+        <div class="epilogue-card">
+          <div class="epilogue-badge">پرونده مختومه شد</div>
+          <h2>حقیقت در دل سایه‌ها</h2>
+          <p id="epilogue-summary"></p>
+          <div id="epilogue-clues" class="epilogue-clues"></div>
+          <button id="restart-btn" class="restart-btn" type="button">شروع مجدد پرونده</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const WORLD_W = 480;
+      const WORLD_H = 270;
+      const GROUND_Y = 222;
+      const RENDER_W = 960;
+      const RENDER_H = 540;
+
+      // =========================================================================
+      // 1. WEB AUDIO ENGINE (Procedural Noir Soundscape)
+      // =========================================================================
+      class SoundEngine {
+        constructor() {
+          this.ctx = null;
+          this.master = null;
+          this.noiseBuf = null;
+          this.muted = false;
+          this.started = false;
+          this.droneNodes = null;
+          this.lastTickTime = 0;
+        }
+
+        init() {
+          if (this.started) {
+            if (this.ctx && this.ctx.state === "suspended" && !this.muted) {
+              this.ctx.resume();
+            }
+            return;
+          }
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+
+          this.ctx = new AudioCtx();
+          const comp = this.ctx.createDynamicsCompressor();
+          comp.threshold.value = -16;
+          comp.ratio.value = 4;
+
+          this.master = this.ctx.createGain();
+          this.master.gain.value = this.muted ? 0 : 0.42;
+          this.master.connect(comp);
+          comp.connect(this.ctx.destination);
+
+          // Prebuild 2-second brown/pink-ish noise buffer for wind & footsteps
+          const sr = this.ctx.sampleRate;
+          const len = sr * 2;
+          this.noiseBuf = this.ctx.createBuffer(1, len, sr);
+          const data = this.noiseBuf.getChannelData(0);
+          let last = 0;
+          for (let i = 0; i < len; i++) {
+            const white = Math.random() * 2 - 1;
+            last = (last + 0.04 * white) / 1.04;
+            data[i] = last * 3.2;
+          }
+
+          // White noise buffer for crisp typewriter & snow crunch
+          const sLen = Math.floor(sr * 0.25);
+          this.whiteBuf = this.ctx.createBuffer(1, sLen, sr);
+          const wData = this.whiteBuf.getChannelData(0);
+          for (let i = 0; i < sLen; i++) {
+            wData[i] = Math.random() * 2 - 1;
+          }
+
+          this.startAmbientDrone();
+          this.started = true;
+          this.updateButtonUI();
+        }
+
+        startAmbientDrone() {
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+
+          // Deep noir D minor drone pad (D1, A1, F2)
+          const padGain = this.ctx.createGain();
+          padGain.gain.setValueAtTime(0.001, now);
+          padGain.gain.exponentialRampToValueAtTime(0.22, now + 2.5);
+
+          const padFilter = this.ctx.createBiquadFilter();
+          padFilter.type = "lowpass";
+          padFilter.frequency.setValueAtTime(220, now);
+          padFilter.Q.value = 1.8;
+
+          const lfo = this.ctx.createOscillator();
+          const lfoGain = this.ctx.createGain();
+          lfo.frequency.value = 0.085;
+          lfoGain.gain.value = 110;
+          lfo.connect(lfoGain);
+          lfoGain.connect(padFilter.frequency);
+          lfo.start(now);
+
+          const freqs = [36.71, 55.0, 87.31, 110.25];
+          const types = ["triangle", "sine", "sawtooth", "sine"];
+          const gains = [0.42, 0.35, 0.12, 0.18];
+
+          freqs.forEach((f, idx) => {
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            osc.type = types[idx];
+            osc.frequency.setValueAtTime(f, now);
+            osc.detune.setValueAtTime((idx - 1.5) * 4.5, now);
+            g.gain.value = gains[idx];
+            osc.connect(g);
+            g.connect(padFilter);
+            osc.start(now);
+          });
+
+          padFilter.connect(padGain);
+          padGain.connect(this.master);
+
+          // Cold alley wind loop
+          const windSrc = this.ctx.createBufferSource();
+          windSrc.buffer = this.noiseBuf;
+          windSrc.loop = true;
+
+          const windFilter = this.ctx.createBiquadFilter();
+          windFilter.type = "bandpass";
+          windFilter.frequency.value = 340;
+          windFilter.Q.value = 1.4;
+
+          const windLfo = this.ctx.createOscillator();
+          const windLfoGain = this.ctx.createGain();
+          windLfo.frequency.value = 0.13;
+          windLfoGain.gain.value = 130;
+          windLfo.connect(windLfoGain);
+          windLfoGain.connect(windFilter.frequency);
+          windLfo.start(now);
+
+          const windGain = this.ctx.createGain();
+          windGain.gain.value = 0.24;
+
+          windSrc.connect(windFilter);
+          windFilter.connect(windGain);
+          windGain.connect(this.master);
+          windSrc.start(now);
+        }
+
+        toggleMute() {
+          if (!this.started) {
+            this.muted = false;
+            this.init();
+            return;
+          }
+          this.muted = !this.muted;
+          if (this.master && this.ctx) {
+            this.master.gain.setTargetAtTime(this.muted ? 0 : 0.42, this.ctx.currentTime, 0.06);
+          }
+          this.updateButtonUI();
+        }
+
+        updateButtonUI() {
+          const btn = document.getElementById("audio-btn");
+          if (!btn) return;
+          const svgOn = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M12 5.5c.9.9.9 4.1 0 5"/></svg>`;
+          const svgOff = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h3l4-3v10L5 10H2z"/><path d="M11.5 6l3 4m0-4l-3 4"/></svg>`;
+          if (!this.started) {
+            btn.innerHTML = `${svgOff}<span>صدا</span>`;
+          } else if (this.muted) {
+            btn.innerHTML = `${svgOff}<span>بی‌صدا</span>`;
+          } else {
+            btn.innerHTML = `${svgOn}<span>صدا روشن</span>`;
+          }
+        }
+
+        playSnowStep() {
+          if (!this.started || this.muted || !this.ctx) return;
+          const now = this.ctx.currentTime;
+
+          // Crunchy snow burst
+          const src = this.ctx.createBufferSource();
+          src.buffer = this.whiteBuf;
+
+          const bp = this.ctx.createBiquadFilter();
+          bp.type = "bandpass";
+          bp.frequency.setValueAtTime(750 + Math.random() * 320, now);
+          bp.Q.value = 1.2;
+
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.linearRampToValueAtTime(0.14, now + 0.018);
+          g.gain.exponentialRampToValueAtTime(0.04, now + 0.065);
+          g.gain.linearRampToValueAtTime(0.09, now + 0.085);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+          src.connect(bp);
+          bp.connect(g);
+          g.connect(this.master);
+          src.start(now);
+          src.stop(now + 0.15);
+
+          // Soft muffled boot thud
+          const osc = this.ctx.createOscillator();
+          const og = this.ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(105 + Math.random() * 15, now);
+          osc.frequency.exponentialRampToValueAtTime(48, now + 0.06);
+          og.gain.setValueAtTime(0.09, now);
+          og.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+          osc.connect(og);
+          og.connect(this.master);
+          osc.start(now);
+          osc.stop(now + 0.075);
+        }
+
+        playTypeClick() {
+          if (!this.started || this.muted || !this.ctx) return;
+          const now = this.ctx.currentTime;
+          if (now - this.lastTickTime < 0.04) return;
+          this.lastTickTime = now;
+
+          const src = this.ctx.createBufferSource();
+          src.buffer = this.whiteBuf;
+          const hp = this.ctx.createBiquadFilter();
+          hp.type = "highpass";
+          hp.frequency.setValueAtTime(2000 + Math.random() * 600, now);
+
+          const g = this.ctx.createGain();
+          g.gain.setValueAtTime(0.045, now);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+          src.connect(hp);
+          hp.connect(g);
+          g.connect(this.master);
+          src.start(now);
+          src.stop(now + 0.018);
+        }
+
+        playClueChime() {
+          if (!this.started || this.muted || !this.ctx) return;
+          const now = this.ctx.currentTime;
+          const notes = [440, 523.25, 659.25];
+          notes.forEach((f, i) => {
+            const t = now + i * 0.085;
+            const osc = this.ctx.createOscillator();
+            const g = this.ctx.createGain();
+            osc.type = "triangle";
+            osc.frequency.setValueAtTime(f, t);
+            g.gain.setValueAtTime(0.001, t);
+            g.gain.linearRampToValueAtTime(0.11, t + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.55);
+            osc.connect(g);
+            g.connect(this.master);
+            osc.start(t);
+            osc.stop(t + 0.6);
+          });
+        }
+
+        playCatChirp() {
+          if (!this.started || this.muted || !this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const filter = this.ctx.createBiquadFilter();
+          const g = this.ctx.createGain();          osc.type = "triangle";
+          osc.frequency.setValueAtTime(540, now);
+          osc.frequency.linearRampToValueAtTime(670, now + 0.07);
+          osc.frequency.exponentialRampToValueAtTime(380, now + 0.24);
+          filter.type = "lowpass";
+          filter.frequency.value = 1400;
+          g.gain.setValueAtTime(0.001, now);
+          g.gain.linearRampToValueAtTime(0.12, now + 0.03);
+          g.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+          osc.connect(filter);
+          filter.connect(g);
+          g.connect(this.master);
+          osc.start(now);
+          osc.stop(now + 0.28);
+        }
+
+        playDoorUnlock() {
+          if (!this.started || this.muted || !this.ctx) return;
+          const now = this.ctx.currentTime;
+
+          // Keycard electronic beep
+          const beep = this.ctx.createOscillator();
+          const bg = this.ctx.createGain();
+          beep.type = "sine";
+          beep.frequency.setValueAtTime(1240, now);
+          beep.frequency.setValueAtTime(1620, now + 0.06);
+          bg.gain.setValueAtTime(0.1, now);
+          bg.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+          beep.connect(bg);
+          bg.connect(this.master);
+          beep.start(now);
+          beep.stop(now + 0.15);
+
+          // Heavy latch clunk
+          const latch = this.ctx.createOscillator();
+          const lg = this.ctx.createGain();
+          latch.type = "square";
+          latch.frequency.setValueAtTime(150, now + 0.16);
+          latch.frequency.exponentialRampToValueAtTime(48, now + 0.28);
+          lg.gain.setValueAtTime(0.16, now + 0.16);
+          lg.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          latch.connect(lg);
+          lg.connect(this.master);
+          latch.start(now + 0.16);
+          latch.stop(now + 0.32);
+        }
+      }
+
+      // =========================================================================
+      // 2. 2D RAYMARCHED LIGHTING & SOFT SHADOW ENGINE (WebGL + Canvas2D Fallback)
+      // =========================================================================
+      class LightingEngine {
+        constructor(displayCanvas) {
+          this.displayCanvas = displayCanvas;
+          this.gl = displayCanvas.getContext("webgl", { alpha: false, antialias: false, preserveDrawingBuffer: false })
+            || displayCanvas.getContext("experimental-webgl", { alpha: false, antialias: false });
+          this.useWebGL = Boolean(this.gl);
+
+          if (this.useWebGL) {
+            this.initWebGL();
+          } else {
+            this.ctx2d = displayCanvas.getContext("2d");
+            this.lightCanvas = document.createElement("canvas");
+            this.lightCanvas.width = WORLD_W;
+            this.lightCanvas.height = WORLD_H;
+            this.lctx = this.lightCanvas.getContext("2d");
+          }
+        }
+
+        initWebGL() {
+          const gl = this.gl;
+          const vsSource = `
+            attribute vec2 aPos;
+            varying vec2 vUv;
+            varying vec2 vWorld;
+            uniform vec2 uWorldRes;
+            void main() {
+              vUv = vec2(aPos.x * 0.5 + 0.5, 0.5 - aPos.y * 0.5);
+              vWorld = vUv * uWorldRes;
+              gl_Position = vec4(aPos, 0.0, 1.0);
+            }
+          `;
+
+          const fsSource = `
+            precision mediump float;
+            varying vec2 vUv;
+            varying vec2 vWorld;
+
+            uniform sampler2D uSceneTex;
+            uniform sampler2D uEmissiveTex;
+            uniform vec2 uWorldRes;
+            uniform vec3 uAmbient;
+            uniform float uTime;
+
+            // Up to 12 AABB shadow-casters: (cx, cy, halfW, halfH)
+            uniform int uNumOccluders;
+            uniform vec4 uOccluders[12];
+
+            // Up to 6 lights: posRadius(x, y, radius, volStrength),
+            // colorSoft(r, g, b, shadowSoftness),
+            // dirCone(dx, dy, cosOuter, cosInner)
+            uniform int uNumLights;
+            uniform vec4 uLightPosRad[6];
+            uniform vec4 uLightColSoft[6];
+            uniform vec4 uLightDirCone[6];
+
+            float sdBox(vec2 p, vec2 c, vec2 b) {
+              vec2 d = abs(p - c) - b;
+              return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+            }
+
+            float sceneSDF(vec2 q, vec2 origP, vec2 lightPos) {
+              float minD = 10000.0;
+              for (int j = 0; j < 12; j++) {
+                if (j >= uNumOccluders) break;
+                vec4 box = uOccluders[j];
+                // Skip self-shadowing on the hit sprite and avoid trapping foreground lights inside props
+                if (sdBox(origP, box.xy, box.zw) <= 0.0 || sdBox(lightPos, box.xy, box.zw) < 1.5) continue;
+                minD = min(minD, sdBox(q, box.xy, box.zw));
+              }
+              return minD;
+            }
+
+            bool rayHitsBox(vec2 ro, vec2 rd, float maxDist, vec4 box) {
+              vec2 bMin = box.xy - box.zw;
+              vec2 bMax = box.xy + box.zw;
+              vec2 safeRd = vec2(
+                abs(rd.x) > 0.001 ? rd.x : (rd.x >= 0.0 ? 0.001 : -0.001),
+                abs(rd.y) > 0.001 ? rd.y : (rd.y >= 0.0 ? 0.001 : -0.001)
+              );
+              vec2 invDir = 1.0 / safeRd;
+              vec2 t0 = (bMin - ro) * invDir;
+              vec2 t1 = (bMax - ro) * invDir;
+              vec2 tNear = min(t0, t1);
+              vec2 tFar = max(t0, t1);
+              float enterT = max(max(tNear.x, tNear.y), 0.0);
+              float exitT = min(tFar.x, tFar.y);
+              return exitT > enterT && enterT < maxDist && exitT > 1.2;
+            }
+
+            // 2D Sphere-Traced Soft Shadow Raymarching
+            float raymarchSoftShadow(vec2 ro, vec2 rd, float maxDist, float k, vec2 lightPos) {
+              float res = 1.0;
+              float t = 1.5;
+              float ph = 1e6;
+              for (int s = 0; s < 28; s++) {
+                if (t >= maxDist - 1.5) break;
+                vec2 q = ro + rd * t;
+                float h = sceneSDF(q, ro, lightPos);
+                if (h < 0.04) return 0.0;
+                float y = (h * h) / (2.0 * ph);
+                float d = sqrt(max(0.0, h * h - y * y));
+                res = min(res, k * d / max(0.001, t - y));
+                ph = h;
+                t += clamp(h, 1.25, 22.0);
+              }
+              return clamp(res, 0.0, 1.0);
+            }
+
+            void main() {
+              vec4 baseCol = texture2D(uSceneTex, vUv);
+              vec4 emissiveCol = texture2D(uEmissiveTex, vUv);
+
+              vec3 totalLight = uAmbient;
+              vec3 volScatter = vec3(0.0);
+
+              vec2 p = vWorld;
+
+              for (int i = 0; i < 6; i++) {
+                if (i >= uNumLights) break;
+                vec4 pr = uLightPosRad[i];
+                vec4 cs = uLightColSoft[i];
+                vec4 dc = uLightDirCone[i];
+
+                vec2 toLight = pr.xy - p;
+                float dist = length(toLight);
+                float radius = pr.z;
+                if (dist > radius) continue;
+
+                vec2 rd = toLight / max(dist, 0.0001);
+
+                // Spotlight / cone check (-rd points from light toward pixel)
+                float cosTheta = dot(-rd, dc.xy);
+                float cone = 1.0;
+                if (dc.z > -0.99) {
+                  cone = smoothstep(dc.z, dc.w, cosTheta);
+                }
+                if (cone <= 0.002) continue;
+
+                float normDist = clamp(1.0 - dist / radius, 0.0, 1.0);
+                float att = (normDist * normDist) / (1.0 + 0.00014 * dist * dist);
+
+                float shadow = raymarchSoftShadow(p, rd, dist, cs.w, pr.xy);
+
+                // Prevent volumetric fog / sharp beam cutoffs inside solid boxes while softly rim-lighting front edges
+                float surfaceFade = 1.0;
+                float volMask = 1.0;
+                for (int j = 0; j < 12; j++) {
+                  if (j >= uNumOccluders) break;
+                  vec4 box = uOccluders[j];
+                  float dL = sdBox(pr.xy, box.xy, box.zw);
+                  float blockWeight = smoothstep(-3.5, 1.5, dL);
+
+                  if (sdBox(p, box.xy, box.zw) <= 0.0) {
+                    if (blockWeight > 0.01) {
+                      vec2 bMin = box.xy - box.zw;
+                      vec2 bMax = box.xy + box.zw;
+                      vec2 safeRd = vec2(
+                        abs(rd.x) > 0.001 ? rd.x : (rd.x >= 0.0 ? 0.001 : -0.001),
+                        abs(rd.y) > 0.001 ? rd.y : (rd.y >= 0.0 ? 0.001 : -0.001)
+                      );
+                      float tx = (safeRd.x > 0.0 ? bMax.x - p.x : bMin.x - p.x) / safeRd.x;
+                      float ty = (safeRd.y > 0.0 ? bMax.y - p.y : bMin.y - p.y) / safeRd.y;
+                      float enterDepth = max(0.0, min(tx, ty));
+
+                      float boxRim = (dc.z >= 0.75)
+                        ? exp(-enterDepth * 0.14)
+                        : mix(0.32, 1.0, exp(-enterDepth * 0.08));
+
+                      surfaceFade = min(surfaceFade, mix(1.0, boxRim, blockWeight));
+                      volMask *= (1.0 - blockWeight);
+                    }
+                  } else if (dL < 1.5 && blockWeight > 0.01) {
+                    if (rayHitsBox(p, rd, dist, box)) {
+                      shadow *= (1.0 - blockWeight);
+                    }
+                  }
+                }
+
+                vec3 contrib = cs.rgb * att * cone * shadow;
+                totalLight += contrib * surfaceFade;
+                volScatter += contrib * pr.w * (0.65 + 0.35 * normDist) * volMask;
+              }
+
+              vec3 lit = baseCol.rgb * totalLight + volScatter + emissiveCol.rgb;
+
+              // Noir vignette & subtle contrast curve
+              vec2 vc = vUv - 0.5;
+              float vig = 1.0 - dot(vc, vc) * 0.58;
+              lit *= clamp(vig, 0.52, 1.0);
+              lit = lit / (lit + vec3(0.45)) * 1.42;
+
+              gl_FragColor = vec4(clamp(lit, 0.0, 1.0), 1.0);
+            }
+          `;
+
+          const compile = (type, src) => {
+            const sh = gl.createShader(type);
+            gl.shaderSource(sh, src);
+            gl.compileShader(sh);
+            if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+              console.warn("Shader compile error:", gl.getShaderInfoLog(sh));
+              return null;
+            }
+            return sh;
+          };
+
+          const vs = compile(gl.VERTEX_SHADER, vsSource);
+          const fs = compile(gl.FRAGMENT_SHADER, fsSource);
+          if (!vs || !fs) {
+            this.useWebGL = false;
+            return;
+          }
+
+          const prog = gl.createProgram();
+          gl.attachShader(prog, vs);
+          gl.attachShader(prog, fs);
+          gl.linkProgram(prog);
+          if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+            console.warn("Program link error:", gl.getProgramInfoLog(prog));
+            this.useWebGL = false;
+            return;
+          }
+
+          gl.useProgram(prog);
+          this.prog = prog;
+
+          const quad = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+          const buf = gl.createBuffer();
+          gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+          gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+
+          const aPos = gl.getAttribLocation(prog, "aPos");
+          gl.enableVertexAttribArray(aPos);
+          gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+          const createTex = (unit) => {
+            const tex = gl.createTexture();
+            gl.activeTexture(gl.TEXTURE0 + unit);
+            gl.bindTexture(gl.TEXTURE_2D, tex);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            return tex;
+          };
+
+          this.sceneTex = createTex(0);
+          this.emissiveTex = createTex(1);
+
+          this.loc = {
+            uSceneTex: gl.getUniformLocation(prog, "uSceneTex"),
+            uEmissiveTex: gl.getUniformLocation(prog, "uEmissiveTex"),
+            uWorldRes: gl.getUniformLocation(prog, "uWorldRes"),
+            uAmbient: gl.getUniformLocation(prog, "uAmbient"),
+            uTime: gl.getUniformLocation(prog, "uTime"),
+            uNumOccluders: gl.getUniformLocation(prog, "uNumOccluders"),
+            uOccluders: gl.getUniformLocation(prog, "uOccluders[0]"),
+            uNumLights: gl.getUniformLocation(prog, "uNumLights"),
+            uLightPosRad: gl.getUniformLocation(prog, "uLightPosRad[0]"),
+            uLightColSoft: gl.getUniformLocation(prog, "uLightColSoft[0]"),
+            uLightDirCone: gl.getUniformLocation(prog, "uLightDirCone[0]")
+          };
+
+          gl.uniform1i(this.loc.uSceneTex, 0);
+          gl.uniform1i(this.loc.uEmissiveTex, 1);
+          gl.uniform2f(this.loc.uWorldRes, WORLD_W, WORLD_H);
+
+          this.occArr = new Float32Array(12 * 4);
+          this.lPosRad = new Float32Array(6 * 4);
+          this.lColSoft = new Float32Array(6 * 4);
+          this.lDirCone = new Float32Array(6 * 4);
+        }
+
+        render(sceneCanvas, emissiveCanvas, occluders, lights, ambient, time) {
+          if (this.useWebGL) {
+            const gl = this.gl;
+            gl.viewport(0, 0, this.displayCanvas.width, this.displayCanvas.height);
+
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, this.sceneTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, sceneCanvas);
+
+            gl.activeTexture(gl.TEXTURE1);
+            gl.bindTexture(gl.TEXTURE_2D, this.emissiveTex);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, emissiveCanvas);
+
+            gl.uniform3f(this.loc.uAmbient, ambient[0], ambient[1], ambient[2]);
+            gl.uniform1f(this.loc.uTime, time);
+
+            const nOcc = Math.min(occluders.length, 12);
+            this.occArr.fill(0);
+            for (let i = 0; i < nOcc; i++) {
+              const o = occluders[i];
+              this.occArr[i * 4] = o.cx;
+              this.occArr[i * 4 + 1] = o.cy;
+              this.occArr[i * 4 + 2] = o.hw;
+              this.occArr[i * 4 + 3] = o.hh;
+            }
+            gl.uniform1i(this.loc.uNumOccluders, nOcc);
+            gl.uniform4fv(this.loc.uOccluders, this.occArr);
+
+            const nLights = Math.min(lights.length, 6);
+            this.lPosRad.fill(0);
+            this.lColSoft.fill(0);
+            this.lDirCone.fill(0);
+            for (let i = 0; i < nLights; i++) {
+              const l = lights[i];
+              this.lPosRad[i * 4] = l.x;
+              this.lPosRad[i * 4 + 1] = l.y;
+              this.lPosRad[i * 4 + 2] = l.radius;
+              this.lPosRad[i * 4 + 3] = l.vol || 0.0;
+
+              this.lColSoft[i * 4] = l.r;
+              this.lColSoft[i * 4 + 1] = l.g;
+              this.lColSoft[i * 4 + 2] = l.b;
+              this.lColSoft[i * 4 + 3] = l.softness || 8.0;
+
+              this.lDirCone[i * 4] = l.dx || 0;
+              this.lDirCone[i * 4 + 1] = l.dy || 1;
+              this.lDirCone[i * 4 + 2] = l.cosOuter ?? -1.0;
+              this.lDirCone[i * 4 + 3] = l.cosInner ?? -1.0;
+            }
+            gl.uniform1i(this.loc.uNumLights, nLights);
+            gl.uniform4fv(this.loc.uLightPosRad, this.lPosRad);
+            gl.uniform4fv(this.loc.uLightColSoft, this.lColSoft);
+            gl.uniform4fv(this.loc.uLightDirCone, this.lDirCone);
+
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+          } else {
+            this.renderFallback2D(sceneCanvas, emissiveCanvas, occluders, lights, ambient);
+          }
+        }
+
+        // Software 2D Raycast Polygon Fallback if WebGL unavailable
+        renderFallback2D(sceneCanvas, emissiveCanvas, occluders, lights, ambient) {
+          const ctx = this.ctx2d;
+          const lctx = this.lctx;
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(sceneCanvas, 0, 0, this.displayCanvas.width, this.displayCanvas.height);
+
+          lctx.globalCompositeOperation = "source-over";
+          lctx.fillStyle = `rgb(${Math.round(ambient[0] * 255)}, ${Math.round(ambient[1] * 255)}, ${Math.round(ambient[2] * 255)})`;
+          lctx.fillRect(0, 0, WORLD_W, WORLD_H);
+
+          lctx.globalCompositeOperation = "lighter";
+          for (const l of lights) {
+            lctx.save();
+            const g = lctx.createRadialGradient(l.x, l.y, 2, l.x, l.y, l.radius);
+            const r = Math.min(255, Math.round(l.r * 210));
+            const gr = Math.min(255, Math.round(l.g * 210));
+            const b = Math.min(255, Math.round(l.b * 210));
+            g.addColorStop(0, `rgba(${r},${gr},${b},0.92)`);
+            g.addColorStop(0.6, `rgba(${r},${gr},${b},0.35)`);
+            g.addColorStop(1, "rgba(0,0,0,0)");
+            lctx.fillStyle = g;
+            if ((l.cosOuter ?? -1) > -0.99) {
+              const ang = Math.atan2(l.dy, l.dx);
+              const half = Math.acos(Math.max(-1, Math.min(1, l.cosOuter)));
+              lctx.beginPath();
+              lctx.moveTo(l.x, l.y);
+              lctx.arc(l.x, l.y, l.radius, ang - half, ang + half);
+              lctx.closePath();
+              lctx.fill();
+            } else {
+              lctx.fillRect(0, 0, WORLD_W, WORLD_H);
+            }
+            lctx.restore();
+          }
+
+          ctx.save();
+          ctx.globalCompositeOperation = "multiply";
+          ctx.drawImage(this.lightCanvas, 0, 0, this.displayCanvas.width, this.displayCanvas.height);
+          ctx.globalCompositeOperation = "screen";
+          ctx.drawImage(emissiveCanvas, 0, 0, this.displayCanvas.width, this.displayCanvas.height);
+          ctx.restore();
+        }
+      }
+
+      // =========================================================================
+      // 3. PROCEDURAL PIXEL ART RENDERER (480x270 Offscreen World + Emissive)
+      // =========================================================================
+      class PixelRenderer {
+        constructor() {
+          this.sceneCanvas = document.createElement("canvas");
+          this.sceneCanvas.width = WORLD_W;
+          this.sceneCanvas.height = WORLD_H;
+          this.sctx = this.sceneCanvas.getContext("2d");
+          this.sctx.imageSmoothingEnabled = false;
+
+          this.emissiveCanvas = document.createElement("canvas");
+          this.emissiveCanvas.width = WORLD_W;
+          this.emissiveCanvas.height = WORLD_H;
+          this.ectx = this.emissiveCanvas.getContext("2d");
+          this.ectx.imageSmoothingEnabled = false;
+
+          // Pre-render static background layers per chapter for rock-solid 60 FPS
+          this.bgCaches = {
+            ch1: this.buildChapter1Backdrop(),
+            ch2: this.buildChapter2Backdrop()
+          };
+
+          // Pre-render wet reflection source buffer (populated cleanly per frame or cached)
+          this.reflCanvas = document.createElement("canvas");
+          this.reflCanvas.width = WORLD_W;
+          this.reflCanvas.height = 48;
+          this.rctx = this.reflCanvas.getContext("2d");
+
+          // Pre-allocated multi-depth falling snow particles
+          this.snow = [];
+          for (let i = 0; i < 165; i++) {
+            const layer = i < 70 ? 0 : i < 130 ? 1 : 2;
+            this.snow.push({
+              x: Math.random() * WORLD_W,
+              y: Math.random() * GROUND_Y,
+              layer,
+              speedY: 11 + layer * 10 + Math.random() * 7,
+              speedX: -5 - layer * 4 + (Math.random() - 0.5) * 3,
+              phase: Math.random() * Math.PI * 2,
+              size: layer === 2 ? 2 : 1
+            });
+          }
+
+          this.breathPuffs = [];
+          this.snowSteps = [];
+        }
+
+        px(ctx, x, y, w, h, color) {
+          ctx.fillStyle = color;
+          ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+        }
+
+        drawNightSkyAndCity(ctx, chapterIndex) {
+          // Deep neo-noir night sky gradient
+          const grad = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+          grad.addColorStop(0, "#040712");
+          grad.addColorStop(0.55, "#091125");
+          grad.addColorStop(1, "#111b36");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, WORLD_W, GROUND_Y);
+
+          // Distant stars / hazy moon halo
+          this.px(ctx, chapterIndex === 1 ? 372 : 95, 34, 10, 10, "#1c2b4f");
+          this.px(ctx, chapterIndex === 1 ? 374 : 97, 36, 6, 6, "#5a74a8");
+          this.px(ctx, chapterIndex === 1 ? 375 : 98, 37, 4, 4, "#9bb3e0");
+
+          // Far skyscraper silhouettes
+          const farTowers = [
+            [12, 58, 34, 164], [50, 42, 28, 180], [82, 74, 38, 148],
+            [124, 36, 32, 186], [160, 66, 40, 156], [208, 48, 30, 174],
+            [244, 62, 42, 160], [292, 34, 36, 188], [334, 54, 44, 168],
+            [386, 40, 34, 182], [428, 68, 40, 154]
+          ];
+          farTowers.forEach(([x, y, w, h], idx) => {
+            const ox = (x + (chapterIndex === 2 ? 22 : 0)) % (WORLD_W - 20);
+            this.px(ctx, ox, y, w, h, "#0a1122");
+            // Roof antenna / water tank
+            if (idx % 3 === 0) {
+              this.px(ctx, ox + w * 0.4, y - 10, 2, 10, "#121c36");
+            }
+            // Tiny lit apartment windows
+            for (let wy = y + 8; wy < GROUND_Y - 40; wy += 9) {
+              for (let wx = ox + 4; wx < ox + w - 5; wx += 7) {
+                const seed = (wx * 31 + wy * 17 + chapterIndex * 13) % 19;
+                if (seed === 0 || seed === 5) {
+                  this.px(ctx, wx, wy, 2, 3, seed === 0 ? "#4d3e28" : "#223354");
+                }
+              }
+            }
+          });
+
+          // Mid-ground urban rooftops
+          const midRoofs = [
+            [0, 108, 70, 114], [76, 118, 86, 104], [170, 96, 74, 126],
+            [250, 112, 92, 110], [350, 102, 76, 120], [430, 114, 50, 108]
+          ];
+          midRoofs.forEach(([x, y, w, h]) => {
+            this.px(ctx, x, y, w, h, "#10182b");
+            this.px(ctx, x, y, w, 2, "#1c2a46");
+          });
+        }
+
+        drawBrickBlock(ctx, x, y, w, h, baseCol, mortarCol, altCol) {
+          this.px(ctx, x, y, w, h, mortarCol);
+          const bh = 5;
+          const bw = 10;
+          for (let py = 0; py < h; py += bh) {
+            const row = Math.floor(py / bh);
+            const offset = (row % 2) * 5;
+            for (let px = -offset; px < w; px += bw) {
+              const bx = Math.max(0, px);
+              const rw = Math.min(bw - 1, w - bx);
+              if (rw <= 1) continue;
+              const hash = (bx * 7 + py * 13) % 11;
+              const col = hash < 3 ? altCol : baseCol;
+              this.px(ctx, x + bx, y + py, rw, Math.min(bh - 1, h - py), col);
+            }
+          }
+        }
+
+        buildChapter1Backdrop() {
+          const c = document.createElement("canvas");
+          c.width = WORLD_W;
+          c.height = WORLD_H;
+          const ctx = c.getContext("2d");
+          ctx.imageSmoothingEnabled = false;
+
+          this.drawNightSkyAndCity(ctx, 1);
+
+          // Left alley dead-end brick building
+          this.drawBrickBlock(ctx, 0, 42, 42, GROUND_Y - 42, "#242c44", "#121728", "#1c2338");
+          this.px(ctx, 40, 42, 3, GROUND_Y - 42, "#101524");
+          // Back alley brick wall behind crime scene & crates
+          this.drawBrickBlock(ctx, 42, 96, 376, GROUND_Y - 96, "#1f263b", "#131829", "#192033");
+          // Wall coping & snow ledge on brick wall top
+          this.px(ctx, 42, 93, 376, 4, "#2d3754");
+          this.px(ctx, 42, 91, 376, 2, "#b5cce6");
+
+          // Left fire escape ladder & frosty pipes
+          for (let fy = 56; fy < 190; fy += 16) {
+            this.px(ctx, 14, fy, 20, 2, "#35415e");
+            this.px(ctx, 14, fy - 1, 18, 1, "#a7c0de");
+          }
+          this.px(ctx, 13, 48, 2, 150, "#2d3752");
+          this.px(ctx, 32, 48, 2, 150, "#2d3752");
+          // Left illuminated frost window
+          this.px(ctx, 44, 114, 14, 24, "#151d33");
+          this.px(ctx, 46, 116, 10, 20, "#2c4673");
+
+          // Right alleyway entrance archway opening into main neon street
+          this.drawBrickBlock(ctx, 418, 48, 62, 62, "#242c44", "#131829", "#1d2438");
+          this.px(ctx, 418, 108, 62, 4, "#313b59");
+          // Distant main-street building silhouette visible through alley opening
+          this.px(ctx, 420, 112, 60, GROUND_Y - 112, "#10172b");
+          this.px(ctx, 450, 130, 26, 48, "#1b2844");
+
+          // Alley drainage pipe & grime streaks
+          this.px(ctx, 156, 96, 4, GROUND_Y - 96, "#2c354f");
+          this.px(ctx, 344, 96, 4, GROUND_Y - 96, "#2c354f");
+
+          // Sidewalk & snow-dusted cobblestone floor
+          this.px(ctx, 0, GROUND_Y - 6, WORLD_W, 8, "#283047");
+          for (let sx = 0; sx < WORLD_W; sx += 14) {
+            this.px(ctx, sx, GROUND_Y - 6, 12, 2, (sx / 14) % 2 ? "#8da6c7" : "#677c9c");
+          }
+          this.px(ctx, 0, GROUND_Y, WORLD_W, 4, "#161c2e");
+
+          return c;
+        }
+
+        buildChapter2Backdrop() {
+          const c = document.createElement("canvas");
+          c.width = WORLD_W;
+          c.height = WORLD_H;
+          const ctx = c.getContext("2d");
+          ctx.imageSmoothingEnabled = false;
+
+          this.drawNightSkyAndCity(ctx, 2);
+
+          // Left alley exit edge wall
+          this.drawBrickBlock(ctx, 0, 82, 44, GROUND_Y - 82, "#1e253a", "#111626", "#181e30");
+          this.px(ctx, 0, 80, 44, 3, "#a8c1de");
+
+          // Pawn Shop Building Facade (x: 174..394, y: 54..222)
+          this.drawBrickBlock(ctx, 174, 54, 220, GROUND_Y - 54, "#242a40", "#131726", "#1d2236");
+          // Ornate roofline cornice with snow
+          this.px(ctx, 170, 50, 228, 6, "#343d59");
+          this.px(ctx, 170, 48, 228, 3, "#c4daf2");
+
+          // Shop awning / canopy above window & door
+          this.px(ctx, 184, 114, 198, 12, "#2e1a28");
+          for (let ax = 186; ax < 380; ax += 10) {
+            this.px(ctx, ax, 115, 5, 10, "#472238");
+          }
+          this.px(ctx, 184, 112, 198, 3, "#bdd4ed");
+
+          // Neon Sign Frame above awning (x: 214..352, y: 74..108)
+          this.px(ctx, 214, 74, 138, 32, "#0d1222");
+          this.px(ctx, 212, 72, 142, 2, "#35405e");
+          this.px(ctx, 212, 106, 142, 2, "#35405e");
+
+          // Right-side neighboring brick wall & meter box
+          this.drawBrickBlock(ctx, 394, 70, 86, GROUND_Y - 70, "#1d2336", "#111624", "#181d2e");
+          this.px(ctx, 394, 68, 86, 3, "#abc3df");
+          // Utility meter box (x: 424..450, y: 158..222)
+          this.px(ctx, 424, 158, 28, 64, "#2e374f");
+          this.px(ctx, 426, 160, 24, 24, "#3b4766");
+          this.px(ctx, 424, 156, 28, 2, "#b5cce6");
+
+          // Sidewalk & curb
+          this.px(ctx, 0, GROUND_Y - 6, WORLD_W, 8, "#293148");
+          for (let sx = 0; sx < WORLD_W; sx += 12) {
+            this.px(ctx, sx, GROUND_Y - 6, 10, 2, (sx / 12) % 3 === 0 ? "#859ec0" : "#5e7294");
+          }
+          this.px(ctx, 0, GROUND_Y, WORLD_W, 4, "#161c2e");
+
+          return c;
+        }
+
+        drawStreetlamp(ctx, ectx, x, flicker) {
+          // Base & iron pole
+          this.px(ctx, x - 4, GROUND_Y - 8, 8, 8, "#263047");
+          this.px(ctx, x - 2, 92, 4, GROUND_Y - 100, "#2f3b57");
+          this.px(ctx, x - 1, 92, 1, GROUND_Y - 100, "#4a597a");
+          // Lamp head & snow cap
+          this.px(ctx, x - 7, 78, 14, 4, "#263047");
+          this.px(ctx, x - 6, 76, 12, 2, "#c8ddf2");
+          this.px(ctx, x - 5, 82, 10, 10, "#6e4e26");
+          // Emissive warm amber bulb
+          const alpha = (0.78 + 0.22 * flicker).toFixed(2);
+          ectx.fillStyle = `rgba(255, 196, 98, ${alpha})`;
+          ectx.fillRect(x - 4, 83, 8, 8);
+          ectx.fillStyle = `rgba(255, 240, 200, ${alpha})`;
+          ectx.fillRect(x - 2, 85, 4, 4);
+        }
+
+        drawChapter1Props(ctx, ectx, state, time) {
+          const flicker = 0.85 + 0.15 * Math.sin(time * 9.3) * Math.sin(time * 23.7);
+          this.drawStreetlamp(ctx, ectx, 205, flicker);
+
+          // Crime Scene Marker & Police Tape (x: 74..142)
+          this.px(ctx, 74, 184, 3, 38, "#475470");
+          this.px(ctx, 142, 184, 3, 38, "#475470");
+          // Tape sagging between stanchions with yellow-black caution pattern
+          for (let tx = 75; tx < 143; tx += 4) {
+            const sag = Math.round(Math.sin(((tx - 75) / 68) * Math.PI) * 4);
+            const col = ((tx / 4) | 0) % 2 === 0 ? "#e6b832" : "#181d2b";
+            this.px(ctx, tx, 192 + sag, 4, 4, col);
+          }
+          // Readable Farsi tape banner plaque above tape
+          this.px(ctx, 84, 174, 48, 12, "#24231a");
+          this.px(ctx, 85, 175, 46, 10, "#d9ad2b");
+          ctx.save();
+          ctx.fillStyle = "#141824";
+          ctx.font = "bold 8px Tahoma, sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.direction = "rtl";
+          ctx.fillText("محل حادثه", 108, 180);
+          ctx.restore();
+
+          // Evidence marker cone #1 + snow bloodstain
+          this.px(ctx, 94, 217, 16, 4, "#4b1624");
+          this.px(ctx, 114, 213, 6, 8, "#e6b832");
+          this.px(ctx, 116, 215, 2, 4, "#141824");
+
+          // Wet boot & cat paw prints under streetlamp (x: 148..226)
+          const printCoords = [152, 164, 176, 188, 200, 212, 222];
+          printCoords.forEach((pxX, i) => {
+            this.px(ctx, pxX, 219 + (i % 2), 6, 2, "#0f1524");
+            this.px(ctx, pxX + 4, 216 + (i % 2), 2, 2, "#192338");
+            this.px(ctx, pxX + 8, 218 - (i % 2), 2, 2, "#192338");
+          });
+
+          // Wooden crate (x: 228..260, y: 188..222)
+          this.px(ctx, 228, 188, 32, 34, "#4a3322");
+          this.px(ctx, 230, 190, 28, 30, "#63452e");
+          // Crate cross planks
+          for (let i = 0; i < 24; i++) {
+            this.px(ctx, 232 + i, 192 + i, 3, 3, "#47301f");
+          }
+          this.px(ctx, 228, 186, 32, 3, "#bdd3eb"); // Snow cap on crate
+
+          // Heavy Metal Container (x: 262..318, y: 127..222)
+          this.px(ctx, 262, 127, 56, 95, "#233048");
+          this.px(ctx, 264, 129, 52, 91, "#2c3d59");
+          for (let cx = 268; cx < 312; cx += 6) {
+            this.px(ctx, cx, 134, 2, 82, "#1c273b");
+          }
+          this.px(ctx, 262, 125, 56, 3, "#c4daf2"); // Snow roof
+
+          // Alley Trash Barrel (x: 368..388, y: 190..222)
+          this.px(ctx, 368, 190, 20, 32, "#2f384d");
+          this.px(ctx, 370, 196, 16, 2, "#1e2536");
+          this.px(ctx, 370, 206, 16, 2, "#1e2536");
+          this.px(ctx, 367, 188, 22, 3, "#a8c1de");
+
+          // Pixel Cat on top of Container (y = 125)
+          const catX = state.catChecked ? 302 : 284;
+          const catY = 125;
+          this.drawPixelCat(ctx, ectx, catX, catY, state, time);
+
+          // Hidden metallic glint under crate once revealed (or subtle sparkle)
+          if (state.catChecked && !state.flags.hasKeycard) {
+            const pulse = 0.5 + 0.5 * Math.sin(time * 6.5);
+            ectx.fillStyle = `rgba(56, 226, 212, ${(0.5 + 0.45 * pulse).toFixed(2)})`;
+            ectx.fillRect(241, 217, 6, 3);
+            ectx.fillStyle = "rgba(255, 235, 160, 0.9)";
+            ectx.fillRect(243, 216, 2, 4);
+          }
+
+          // Subtle Neon Exit Sign glow on far right edge pointing to Chapter 2
+          const exitPulse = 0.5 + 0.5 * Math.sin(time * 3.0);
+          ectx.fillStyle = `rgba(255, 71, 111, ${(0.28 + 0.2 * exitPulse).toFixed(2)})`;
+          ectx.fillRect(466, 148, 8, 28);
+        }
+
+        drawPixelCat(ctx, ectx, x, y, state, time) {
+          const alert = state.catAlert || state.catChecked;
+          const bob = alert ? 0 : Math.round(Math.sin(time * 2.2) * 0.6);
+
+          // Tail sway
+          const tailShift = Math.round(Math.sin(time * 3.5) * 2);
+          this.px(ctx, x - 6, y - 4 + tailShift, 6, 2, "#141824");
+          this.px(ctx, x - 8, y - 6 + tailShift, 3, 2, "#1d2336");
+
+          if (!alert) {
+            // Curled sleeping/dozing silhouette
+            this.px(ctx, x - 3, y - 7 + bob, 12, 7, "#131724");
+            this.px(ctx, x + 5, y - 10 + bob, 6, 5, "#191e30");
+            // Ears
+            this.px(ctx, x + 5, y - 12 + bob, 2, 2, "#242b42");
+            this.px(ctx, x + 9, y - 12 + bob, 2, 2, "#242b42");
+            // Occasional blink
+            if (Math.sin(time * 1.1) > 0.7) {
+              ectx.fillStyle = "#ffb347";
+              ectx.fillRect(x + 7, y - 9 + bob, 1, 1);
+              ectx.fillRect(x + 9, y - 9 + bob, 1, 1);
+            }
+          } else {
+            // Sitting upright curious cat looking toward detective / crate edge
+            this.px(ctx, x - 2, y - 10, 9, 10, "#151928");
+            this.px(ctx, x, y - 15, 7, 6, "#1d2338");
+            // Ears
+            this.px(ctx, x, y - 17, 2, 2, "#2b3452");
+            this.px(ctx, x + 5, y - 17, 2, 2, "#2b3452");
+            // Glowing curious amber-emerald eyes
+            const blink = Math.sin(time * 2.1) > -0.92;
+            if (blink) {
+              ectx.fillStyle = "#ffd166";
+              ectx.fillRect(x + 1, y - 13, 2, 1);
+              ectx.fillRect(x + 4, y - 13, 2, 1);
+            }
+          }
+        }
+
+        drawChapter2Props(ctx, ectx, state, time) {
+          const streetFlicker = 0.88 + 0.12 * Math.sin(time * 8.1) * Math.sin(time * 19.2);
+          this.drawStreetlamp(ctx, ectx, 84, streetFlicker);
+
+          // Sidewalk Metal Trash Bin (x: 132..158, y: 184..222)
+          this.px(ctx, 132, 186, 26, 36, "#2c364d");
+          this.px(ctx, 134, 188, 22, 32, "#384561");
+          this.px(ctx, 130, 183, 30, 4, "#465578");
+          this.px(ctx, 131, 181, 28, 2, "#bcd3eb");
+
+          // Neon Sign inside frame (x: 210..356, y: 72..106)
+          const neonFlicker = Math.sin(time * 14.0) * Math.sin(time * 37.0) > -0.82 ? 1.0 : 0.35;
+          ectx.save();
+          ectx.strokeStyle = `rgba(56, 226, 212, ${(0.85 * neonFlicker).toFixed(2)})`;
+          ectx.lineWidth = 1.5;
+          ectx.strokeRect(212, 74, 142, 30);
+          ectx.fillStyle = `rgba(255, 88, 128, ${(0.95 * neonFlicker).toFixed(2)})`;
+          ectx.font = "bold 10px Tahoma, sans-serif";
+          ectx.textAlign = "center";
+          ectx.textBaseline = "middle";
+          ectx.direction = "rtl";
+          ectx.fillText("امانت‌فروشی سایه", 283, 89);
+          ectx.restore();
+
+          // Barred Display Window (x: 202..276, y: 136..196)
+          this.px(ctx, 200, 134, 78, 64, "#141928");
+          // Interior shelves & safe silhouette visible behind glass
+          const unlocked = state.flags.doorUnlocked;
+          const interiorBg = unlocked ? "#3a251d" : "#101829";
+          this.px(ctx, 204, 138, 70, 56, interiorBg);
+          // Safe silhouette + clock shelf
+          this.px(ctx, 210, 170, 22, 24, unlocked ? "#6e4c36" : "#182238");
+          this.px(ctx, 244, 146, 26, 4, unlocked ? "#7a5438" : "#1c2740");
+          this.px(ctx, 248, 138, 8, 8, unlocked ? "#c49456" : "#22304d");
+          if (unlocked) {
+            ectx.fillStyle = "rgba(255, 175, 85, 0.12)";
+            ectx.fillRect(204, 138, 70, 56);
+          }
+          // Vertical iron security bars (window mullions)
+          for (let bx = 212; bx <= 268; bx += 14) {
+            this.px(ctx, bx, 136, 3, 60, "#1c2336");
+          }
+
+          // Glass Entrance Door (x: 304..358, y: 132..222)
+          this.px(ctx, 302, 130, 58, 92, "#171d2e");
+          if (!unlocked) {
+            // Closed frosted glass door with interior shadow silhouette
+            this.px(ctx, 306, 134, 50, 86, "#142038");
+            // Shadowy figure / desk silhouette inside
+            this.px(ctx, 322, 158, 18, 42, "#0b1120");
+            this.px(ctx, 306, 178, 50, 4, "#24304d");
+            // Electronic keycard lock panel
+            this.px(ctx, 350, 172, 6, 12, "#2d3854");
+            ectx.fillStyle = state.flags.hasKeycard ? "#4ade80" : "#ff476f";
+            ectx.fillRect(352, 175, 2, 3);
+          } else {
+            // Door slid open revealing illuminated interior!
+            this.px(ctx, 306, 134, 50, 86, "#3b2319");
+            // Desk, open ledger, tape recorder
+            this.px(ctx, 312, 188, 38, 32, "#593624");
+            this.px(ctx, 318, 183, 14, 5, "#dfd6c5");
+            this.px(ctx, 336, 184, 9, 4, "#2c364f");
+            // Hanging interior light bulb
+            this.px(ctx, 330, 134, 2, 12, "#1c1f2e");
+            ectx.fillStyle = "rgba(255, 214, 130, 0.92)";
+            ectx.fillRect(328, 146, 6, 6);
+            ectx.fillStyle = "rgba(255, 170, 75, 0.14)";
+            ectx.fillRect(306, 134, 50, 86);
+            // Slid glass door panel tucked at left edge
+            this.px(ctx, 294, 134, 14, 86, "#1b2842");
+          }
+        }
+
+        drawDetective(ctx, ectx, det, time) {
+          const x = Math.round(det.x);
+          const y = Math.round(det.y);
+          const dir = det.facing; // 1 = right, -1 = left
+
+          // Walk bob & stride offsets
+          let bob = 0;
+          let stride = 0;
+          if (det.anim === "walk") {
+            const f = det.frame % 6;
+            bob = f === 1 || f === 4 ? -1 : 0;
+            stride = [0, 3, 2, 0, -3, -2][f];
+          } else if (det.anim === "inspect") {
+            bob = 3;
+          } else {
+            bob = Math.round(Math.sin(time * 2.4) * 0.5);
+          }
+
+          const topY = y - 33 + bob;
+
+          // Boots & Legs
+          this.px(ctx, x - 4 + stride, y - 9, 4, 9, "#171d2b");
+          this.px(ctx, x + 1 - stride, y - 9, 4, 9, "#1f273b");
+          this.px(ctx, x - 5 + stride, y - 3, 5, 3, "#10141f");
+          this.px(ctx, x + 1 - stride, y - 3, 5, 3, "#121724");
+
+          // Flowing Trenchcoat Body
+          const coatSwing = det.anim === "walk" ? Math.round(Math.sin(det.walkPhase) * 2) : 0;
+          this.px(ctx, x - 6 - coatSwing * dir, topY + 12, 12, 15, "#28324a");
+          this.px(ctx, x - 5, topY + 11, 10, 14, "#323f5c");
+          // Coat highlight shoulder & lapel
+          this.px(ctx, x - 4 + dir * 2, topY + 12, 4, 11, "#3f4f73");
+          // Belt
+          this.px(ctx, x - 5, topY + 18, 10, 2, "#192030");
+          this.px(ctx, x + dir * 1, topY + 18, 2, 2, "#9c7b49");
+
+          // Noir Burgundy Scarf & Upturned Collar
+          this.px(ctx, x - 4, topY + 9, 8, 4, "#6e2130");
+          this.px(ctx, x - dir * 3, topY + 12, 3, 5, "#872a3c");
+
+          // Head (under brim shadow)
+          this.px(ctx, x - 4, topY + 3, 8, 7, "#b8967d");
+          this.px(ctx, x - 4, topY + 3, 8, 3, "#6b5446"); // Shadow under fedora brim
+
+          // Fedora Hat
+          this.px(ctx, x - 7, topY + 2, 14, 2, "#1a2030");
+          this.px(ctx, x - 5, topY - 2, 10, 4, "#232b40");
+          this.px(ctx, x - 5, topY + 1, 10, 1, "#6b4f2b"); // Hat band
+
+          // Aimed Arm & Flashlight
+          const armPivotX = x + dir * 2;
+          const armPivotY = topY + 14;
+          const len = 7;
+          const handX = Math.round(armPivotX + Math.cos(det.aimAngle) * len);
+          const handY = Math.round(armPivotY + Math.sin(det.aimAngle) * len);
+
+          // Draw sleeve segment
+          const midX = Math.round((armPivotX + handX) * 0.5);
+          const midY = Math.round((armPivotY + handY) * 0.5);
+          this.px(ctx, armPivotX - 1, armPivotY - 1, 3, 3, "#344261");
+          this.px(ctx, midX - 1, midY - 1, 3, 3, "#3b4a6e");
+          // Flashlight body & glowing lens
+          this.px(ctx, handX - 1, handY - 1, 3, 3, "#8fa1bd");
+          ectx.fillStyle = "rgba(255, 245, 210, 0.95)";
+          ectx.fillRect(handX, handY, 2, 2);
+
+          det.flashOriginX = handX + Math.cos(det.aimAngle) * 2;
+          det.flashOriginY = handY + Math.sin(det.aimAngle) * 2;
+        }
+
+        drawWetReflections(ctx, sceneCopy, time) {
+          // Sample strip right above ground (y = 174..222) and mirror flipped below GROUND_Y
+          this.rctx.clearRect(0, 0, WORLD_W, 48);
+          this.rctx.save();
+          this.rctx.scale(1, -1);
+          this.rctx.drawImage(sceneCopy, 0, GROUND_Y - 48, WORLD_W, 48, 0, -48, WORLD_W, 48);
+          this.rctx.restore();
+
+          // Dark wet asphalt base
+          this.px(ctx, 0, GROUND_Y, WORLD_W, WORLD_H - GROUND_Y, "#0b101e");
+
+          // Scanline shimmer distortion on reflections
+          for (let ry = 0; ry < 44; ry += 2) {
+            const wave = Math.round(Math.sin(time * 4.2 + ry * 0.55) * (1 + ry * 0.04));
+            const alpha = Math.max(0.06, 0.42 - ry * 0.0085);
+            ctx.globalAlpha = alpha;
+            ctx.drawImage(this.reflCanvas, 0, ry, WORLD_W, 2, wave, GROUND_Y + 2 + ry, WORLD_W, 2);
+          }
+          ctx.globalAlpha = 1.0;
+
+          // Subtle snow puddles on foreground sidewalk edge
+          for (let pxX = 18; pxX < WORLD_W - 20; pxX += 64) {
+            this.px(ctx, pxX, GROUND_Y + 4, 20, 2, "rgba(155, 180, 215, 0.14)");
+          }
+        }
+
+        updateParticles(dt, det, time) {
+          // Update snow flakes
+          for (const f of this.snow) {
+            f.y += f.speedY * dt;
+            f.x += (f.speedX + Math.sin(time * 1.4 + f.phase) * 5) * dt;
+            if (f.y > GROUND_Y) {
+              f.y = -3;
+              f.x = Math.random() * WORLD_W;
+            }
+            if (f.x < 0) f.x += WORLD_W;
+            if (f.x >= WORLD_W) f.x -= WORLD_W;
+          }
+
+          // Cold breath vapor from detective
+          if (Math.random() < dt * 0.55) {
+            this.breathPuffs.push({
+              x: det.x + det.facing * 4,
+              y: det.y - 26,
+              vx: det.facing * 6 + (Math.random() - 0.5) * 3,
+              vy: -9 - Math.random() * 4,
+              life: 0.9
+            });
+          }
+          for (let i = this.breathPuffs.length - 1; i >= 0; i--) {
+            const p = this.breathPuffs[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.life -= dt;
+            if (p.life <= 0) this.breathPuffs.splice(i, 1);
+          }
+
+          // Footstep snow dust puffs
+          for (let i = this.snowSteps.length - 1; i >= 0; i--) {
+            const s = this.snowSteps[i];
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+            s.vy += 28 * dt;
+            s.life -= dt;
+            if (s.life <= 0) this.snowSteps.splice(i, 1);
+          }
+        }
+
+        spawnSnowKick(x, y, dir) {
+          for (let i = 0; i < 4; i++) {
+            this.snowSteps.push({              x: x + (Math.random() - 0.5) * 6,
+              y: y - 1,
+              vx: -dir * (10 + Math.random() * 14),
+              vy: -14 - Math.random() * 14,
+              life: 0.35 + Math.random() * 0.2
+            });
+          }
+        }
+
+        drawParticles(ctx, ectx, lights) {
+          // Cold breath puffs
+          for (const p of this.breathPuffs) {
+            ctx.fillStyle = `rgba(205, 224, 248, ${(p.life * 0.26).toFixed(2)})`;
+            ctx.fillRect(Math.round(p.x), Math.round(p.y), 2, 2);
+          }
+          // Snow kickups
+          for (const s of this.snowSteps) {
+            ctx.fillStyle = `rgba(218, 232, 250, ${(s.life * 1.4).toFixed(2)})`;
+            ctx.fillRect(Math.round(s.x), Math.round(s.y), 1, 1);
+          }
+          // Falling snow (brightens softly when inside active lights!)
+          for (const f of this.snow) {
+            const fx = Math.round(f.x);
+            const fy = Math.round(f.y);
+            ctx.fillStyle = f.layer === 0 ? "#4a5d82" : f.layer === 1 ? "#8aa2c8" : "#cbdcf2";
+            ctx.fillRect(fx, fy, f.size, f.size);
+
+            // Illuminated snow shimmer near lights
+            for (let i = 0; i < Math.min(3, lights.length); i++) {
+              const l = lights[i];
+              const dx = fx - l.x;
+              const dy = fy - l.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < l.radius * l.radius * 0.5) {
+                const dist = Math.sqrt(d2);
+                let inCone = true;
+                if ((l.cosOuter ?? -1) > -0.99 && dist > 1) {
+                  const dot = (dx * l.dx + dy * l.dy) / dist;
+                  inCone = dot > l.cosOuter;
+                }
+                if (inCone) {
+                  ectx.fillStyle = `rgba(220, 235, 255, ${(0.25 + f.layer * 0.14).toFixed(2)})`;
+                  ectx.fillRect(fx, fy, f.size, f.size);
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        renderScene(state, time, lights) {
+          const ctx = this.sctx;
+          const ectx = this.ectx;
+
+          ctx.clearRect(0, 0, WORLD_W, WORLD_H);
+          ectx.clearRect(0, 0, WORLD_W, WORLD_H);
+
+          // 1. Cached sky & brick architecture
+          const bg = state.chapter === 1 ? this.bgCaches.ch1 : this.bgCaches.ch2;
+          ctx.drawImage(bg, 0, 0);
+
+          // 2. Chapter props & interactive objects
+          if (state.chapter === 1) {
+            this.drawChapter1Props(ctx, ectx, state, time);
+          } else {
+            this.drawChapter2Props(ctx, ectx, state, time);
+          }
+
+          // 3. Playable detective
+          this.drawDetective(ctx, ectx, state.detective, time);
+
+          // 4. Hotspot subtle tarnished-brass corner brackets when player is near
+          if (state.activeHotspot) {
+            const h = state.activeHotspot;
+            const pulse = 0.45 + 0.55 * Math.sin(time * 4.0);
+            const x0 = Math.round(h.x - h.w * 0.5);
+            const y0 = Math.round(h.y - h.h * 0.5);
+            const x1 = x0 + h.w;
+            const y1 = y0 + h.h;
+            const bl = 4;
+            ectx.fillStyle = `rgba(208, 172, 110, ${(0.28 + 0.28 * pulse).toFixed(2)})`;
+            // Top-left
+            ectx.fillRect(x0, y0, bl, 1);
+            ectx.fillRect(x0, y0, 1, bl);
+            // Top-right
+            ectx.fillRect(x1 - bl, y0, bl, 1);
+            ectx.fillRect(x1 - 1, y0, 1, bl);
+            // Bottom-left
+            ectx.fillRect(x0, y1 - 1, bl, 1);
+            ectx.fillRect(x0, y1 - bl, 1, bl);
+            // Bottom-right
+            ectx.fillRect(x1 - bl, y1 - 1, bl, 1);
+            ectx.fillRect(x1 - 1, y1 - bl, 1, bl);
+          }
+
+          // 5. Wet ground reflections (mirrors everything drawn above ground!)
+          this.drawWetReflections(ctx, this.sceneCanvas, time);
+
+          // 6. Snow & breath particles over scene
+          this.drawParticles(ctx, ectx, lights);
+        }
+      }
+
+      // =========================================================================
+      // 4. PERSIAN STORYLINE, CLUES & BRANCHING CHOICES
+      // =========================================================================
+      const CLUE_META = {
+        scene_report: {
+          label: "گزارش صحنه",
+          icon: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="2.5" width="10" height="11.5" rx="1"/><path d="M5.5 2.5v1.5h5V2.5M5.5 7h5M5.5 10h3.5"/></svg>`,
+          desc: "لکه‌های برف‌زده نشان می‌دهد درگیری نیمه‌شب رخ داده و یک نفر لنگ‌لنگان به سمت چراغ رفته است."
+        },
+        footprints_clue: {
+          label: "ردپاهای خیس",
+          icon: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="5.5" cy="9.5" rx="1.8" ry="3"/><ellipse cx="10.5" cy="6.5" rx="1.8" ry="3"/></svg>`,
+          desc: "رد کفش سنگین و پنجه‌های گربه کنار هم تا زیر جعبه‌ی چوبی کشیده شده‌اند."
+        },
+        torn_note: {
+          label: "یادداشت مرموز",
+          icon: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M3.5 2.5h9v8l-2.5 3H3.5z"/><path d="M5.5 6h5M5.5 8.5h3.5"/></svg>`,
+          desc: "تکه کاغذ خیس با امضای مالک امانت‌فروشی: «ساعت ۱۲، در پشتی بازه»."
+        },
+        keycard: {
+          label: "کارت کلید سایه",
+          icon: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="5.2" cy="8" r="2.6"/><path d="M7.8 8H14m-2 0v2.2"/></svg>`,
+          desc: "کارت کلید مغناطیسی مخصوص در شیشه‌ای مغازه «امانت‌فروشی سایه»."
+        },
+        pawn_receipt: {
+          label: "رسید امانت‌فروشی",
+          icon: `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 2.5h8v11l-1.5-1-1.5 1-1.5-1-1.5 1-2-1z"/><path d="M6 6h4M6 8.5h3"/></svg>`,
+          desc: "رسید نیم‌سوخته از سطل زباله؛ شماره صندوق ۷ ساعت‌ساز روی آن خط خورده."
+        }
+      };
+
+      function getChapterHotspots(chapter, flags) {
+        if (chapter === 1) {
+          const list = [
+            {
+              id: "crime_scene",
+              label: "محل حادثه",
+              x: 108, y: 196, w: 68, h: 48, range: 64
+            },
+            {
+              id: "footprints",
+              label: "ردپاهای خیس",
+              x: 186, y: 214, w: 64, h: 24, range: 62
+            },
+            {
+              id: "alley_cat",
+              label: "گربه مشکوک",
+              x: flags.catChecked ? 302 : 284, y: 118, w: 30, h: 26, range: 70
+            }
+          ];
+          if (flags.catChecked || flags.printsChecked) {
+            list.push({
+              id: "hidden_crate",
+              label: flags.hasKeycard ? "زیر جعبه (بررسی شد)" : "شیء براق زیر جعبه",
+              x: 244, y: 208, w: 36, h: 30, range: 58
+            });
+          }
+          return list;
+        }
+        return [
+          {
+            id: "trash_bin",
+            label: "سطل زباله فلزی",
+            x: 145, y: 202, w: 34, h: 40, range: 58
+          },
+          {
+            id: "shop_window",
+            label: "ویترین و تابلوی نئون",
+            x: 240, y: 166, w: 78, h: 66, range: 68
+          },
+          {
+            id: "shop_door",
+            label: flags.doorUnlocked ? "ورودی مغازه" : "در شیشه‌ای قفل‌شده",
+            x: 331, y: 176, w: 58, h: 88, range: 62
+          }
+        ];
+      }
+
+      function buildDialogueScript(hotspotId, game) {
+        const { flags } = game.state;
+
+        switch (hotspotId) {
+          case "crime_scene":
+            return {
+              speaker: "کارآگاه مانی",
+              text: "نوار زرد رو عجله‌ای بستن. رد خون هنوز تازه‌ست...",
+              choices: [
+                {
+                  text: "بررسی برف خون‌آلود و پلاک ۱",
+                  action: () => {
+                    game.addClue("scene_report");
+                    game.completeObjective("obj1");
+                    return {
+                      speaker: "گزارش صحنه",
+                      text: "نزاع نیمه‌شب بوده؛ کیف سنگینی تا زیر چراغ کشیده شده."
+                    };
+                  }
+                },
+                {
+                  text: "چک کردن نوار پاره و جهت فرار",
+                  action: () => {
+                    game.addClue("scene_report");
+                    game.completeObjective("obj1");
+                    return {
+                      speaker: "کارآگاه مانی",
+                      text: "یکی خواسته کوچه خلوت بمونه... عجیب مشکوکه!"
+                    };
+                  }
+                }
+              ]
+            };
+
+          case "footprints":
+            return {
+              speaker: "کارآگاه مانی",
+              text: "رد چکمه سنگینه... کنارش هم جای پنجه گربه‌ست!",
+              choices: [
+                {
+                  text: "اندازه‌گیری عمق رد چکمه",
+                  action: () => {
+                    flags.printsChecked = true;
+                    game.addClue("footprints_clue");
+                    return {
+                      speaker: "کارآگاه مانی",
+                      text: "پای چپ لنگ می‌زده. مستقیم رفته سمت کانتینر."
+                    };
+                  }
+                },
+                {
+                  text: "ردگیری پنجه‌های گربه در برف",
+                  action: () => {
+                    flags.printsChecked = true;
+                    game.addClue("footprints_clue");
+                    return {
+                      speaker: "کارآگاه مانی",
+                      text: "گربه یه چیز براق رو تا زیر جعبه دنبال کرده!"
+                    };
+                  }
+                }
+              ]
+            };
+
+          case "alley_cat":
+            return {
+              speaker: "کارآگاه مانی",
+              text: "باید ببینم این گربه چی قایم کرده...",
+              choices: [
+                {
+                  text: "آروم صداش بزنم و نوازش کنم",
+                  action: () => {
+                    flags.catChecked = true;
+                    game.sound.playCatChirp();
+                    return {
+                      speaker: "گربه کوچه‌گرد",
+                      target: "cat",
+                      text: "میو... خرخر! (با پوزه به شکاف زیر جعبه اشاره می‌کنه)"
+                    };
+                  }
+                },
+                {
+                  text: "نور بندازم پشت کانتینر",
+                  action: () => {
+                    flags.catChecked = true;
+                    game.sound.playCatChirp();
+                    return {
+                      speaker: "کارآگاه مانی",
+                      text: "پرید کنار! یه چیز فلزی زیر جعبه برق زد."
+                    };
+                  }
+                }
+              ]
+            };
+
+          case "hidden_crate":
+            if (flags.hasKeycard) {
+              return {
+                speaker: "کارآگاه مانی",
+                text: "کارت کلید و یادداشت پیشمه. بریم سر وقت مغازه!"
+              };
+            }
+            return {
+              speaker: "کارآگاه مانی",
+              text: "یه کارت فلزی و کاغذ خیس زیر جعبه گیر کرده.",
+              choices: [
+                {
+                  text: "برداشتن کارت کلید مغناطیسی",
+                  action: () => {
+                    flags.hasKeycard = true;
+                    game.addClue("keycard");
+                    game.addClue("torn_note");
+                    game.completeObjective("obj2");
+                    return {
+                      speaker: "کشف کلیدی",
+                      text: "کارت «امانت‌فروشی سایه»! پشتش نوشته: ساعت ۱۲، در پشتی بازه."
+                    };
+                  }
+                },
+                {
+                  text: "خوندن یادداشت خیس کنار کارت",
+                  action: () => {
+                    flags.hasKeycard = true;
+                    game.addClue("torn_note");
+                    game.addClue("keycard");
+                    game.completeObjective("obj2");
+                    return {
+                      speaker: "کارآگاه مانی",
+                      text: "امضای صاحب مغازه‌ست! وقت سر زدن به انتهای کوچه‌ست."
+                    };
+                  }
+                }
+              ]
+            };
+
+          case "trash_bin":
+            return {
+              speaker: "کارآگاه مانی",
+              text: "بوی کاغذ سوخته و روغن داغ میاد...",
+              choices: [
+                {
+                  text: "گشتن لای کاغذهای مچاله",
+                  action: () => {
+                    game.addClue("pawn_receipt");
+                    return {
+                      speaker: "مدرک تازه",
+                      text: "رسید صندوق ۷ ساعت‌ساز! نیمه‌سوخته انداختنش اینجا."
+                    };
+                  }
+                },
+                {
+                  text: "بررسی لکه روغن روی درپوش",
+                  action: () => {
+                    game.addClue("pawn_receipt");
+                    return {
+                      speaker: "کارآگاه مانی",
+                      text: "اثر تازه دستکش روغنی! دزد چند دقیقه پیش اینجا بوده."
+                    };
+                  }
+                }
+              ]
+            };
+
+          case "shop_window":
+            return {
+              speaker: "کارآگاه مانی",
+              text: "نئون خس‌خس می‌کنه... داخل مغازه پر از سایه‌ست.",
+              choices: [
+                {
+                  text: "نگاه از لای میله‌های ویترین",
+                  action: () => ({
+                    speaker: "مشاهده ویترین",
+                    text: "در گاوصندوق بازه و یه کیف آشنا رو پیشخونه!"
+                  })
+                },
+                {
+                  text: "بررسی سیم‌کشی تابلوی نئون",
+                  action: () => ({
+                    speaker: "کارآگاه مانی",
+                    text: "سیم دزدگیر رو از بیخ بریدن! کارِ یه آشناست."
+                  })
+                }
+              ]
+            };
+
+          case "shop_door":
+            if (!flags.hasKeycard) {
+              return {
+                speaker: "کارآگاه مانی",
+                text: "قفل دیجیتاله... کلیدش همون کوچه برفی جا مونده."
+              };
+            }
+            if (!flags.doorUnlocked) {
+              return {
+                speaker: "کارآگاه مانی",
+                text: "چراغ کارت‌خوان سبزه. بالاخره وقت روبرو شدنه...",
+                choices: [
+                  {
+                    text: "کشیدن کارت کلید و ورود",
+                    action: () => game.triggerDoorReveal()
+                  },
+                  {
+                    text: "چک کردن قفل قبل از ورود",
+                    action: () => game.triggerDoorReveal(true)
+                  }
+                ]
+              };
+            }
+            return {
+              speaker: "کارآگاه مانی",
+              text: "پرونده بسته شد. سایه‌ها دیگه رازی ندارن."
+            };
+        }
+        return null;
+      }
+
+      // =========================================================================
+      // 5. MAIN GAME ENGINE & HUD CONTROLLER
+      // =========================================================================
+      class MysteryGame {
+        constructor() {
+          this.canvas = document.getElementById("gl-canvas");
+          this.sound = new SoundEngine();
+          this.lighting = new LightingEngine(this.canvas);
+          this.renderer = new PixelRenderer();
+
+          this.keys = new Set();
+          this.mouseWorld = { x: 260, y: 170 };
+          this.lastTime = performance.now();
+          this.elapsed = 0;
+
+          this.dom = {
+            stage: document.getElementById("game-stage"),
+            chapterLabel: document.getElementById("chapter-label"),
+            objCounter: document.getElementById("obj-counter"),
+            objItems: document.querySelectorAll(".obj-item"),
+            prompts: document.getElementById("world-prompts"),
+            dialoguePanel: document.getElementById("dialogue-panel"),
+            thoughtTail: document.getElementById("thought-tail"),
+            dialogueSpeaker: document.getElementById("dialogue-speaker"),
+            dialogueText: document.getElementById("dialogue-text"),
+            dialogueChoices: document.getElementById("dialogue-choices"),
+            dialogueHint: document.getElementById("dialogue-action-hint"),
+            invSlots: document.getElementById("inventory-slots"),
+            toast: document.getElementById("toast-banner"),
+            curtain: document.getElementById("transition-curtain"),
+            curtainText: document.getElementById("transition-text"),
+            epilogue: document.getElementById("epilogue-modal"),
+            epilogueSummary: document.getElementById("epilogue-summary"),
+            epilogueClues: document.getElementById("epilogue-clues"),
+            audioBtn: document.getElementById("audio-btn"),
+            restartBtn: document.getElementById("restart-btn")
+          };
+
+          this.resetGame();
+          this.sound.updateButtonUI();
+          this.bindEvents();
+          requestAnimationFrame((t) => this.loop(t));
+        }
+
+        resetGame() {
+          this.state = {
+            chapter: 1,
+            transitioning: false,
+            activeHotspot: null,
+            catAlert: false,
+            catChecked: false,
+            detective: {
+              x: 56,
+              y: GROUND_Y,
+              vx: 0,
+              facing: 1,
+              aimAngle: -0.15,
+              anim: "idle",
+              frame: 0,
+              walkPhase: 0,
+              lastStepFrame: -1,
+              flashOriginX: 64,
+              flashOriginY: GROUND_Y - 17
+            },
+            flags: {
+              printsChecked: false,
+              catChecked: false,
+              hasKeycard: false,
+              doorUnlocked: false,
+              caseClosed: false
+            },
+            objectives: {
+              obj1: false,
+              obj2: false,
+              obj3: false
+            },
+            inventory: []
+          };
+
+          this.dialogue = {
+            open: false,
+            fullText: "",
+            visibleChars: 0,
+            typing: false,
+            choices: null,
+            target: "detective",
+            autoCloseTimer: 0
+          };
+
+          this.dom.epilogue.classList.remove("show");
+          this.closeDialogue();
+          this.updateHUD();
+
+          // Short punchy opening thought bubble above Mani's head
+          this.openDialogue({
+            speaker: "کارآگاه مانی",
+            text: "برف همه ردها رو می‌شوره... از نوار پلیس شروع کنم.",
+            autoClose: 5.5
+          });
+        }
+
+        bindEvents() {
+          const unlockAudio = () => this.sound.init();
+
+          window.addEventListener("keydown", (e) => {
+            unlockAudio();
+            const code = e.code;
+            this.keys.add(code);
+
+            if (code === "KeyE" || code === "Space" || code === "Enter") {
+              if (this.dialogue.open) {
+                if (this.dialogue.typing) {
+                  this.finishTyping();
+                } else if (!this.dialogue.choices || this.dialogue.choices.length === 0) {
+                  this.closeDialogue();
+                } else if (code === "KeyE" && this.state.activeHotspot) {
+                  // Allow E to close passive dialogue or re-inspect
+                }
+                if (code === "Space") e.preventDefault();
+                return;
+              }
+              if (code === "KeyE" && this.state.activeHotspot) {
+                this.interactWith(this.state.activeHotspot);
+              }
+            }
+
+            if (this.dialogue.open && this.dialogue.choices && !this.dialogue.typing) {
+              if (code === "Digit1" || code === "Numpad1") {
+                this.selectChoice(0);
+              } else if (code === "Digit2" || code === "Numpad2") {
+                this.selectChoice(1);
+              }
+            }
+          });
+
+          window.addEventListener("keyup", (e) => {
+            this.keys.delete(e.code);
+          });
+
+          this.canvas.addEventListener("mousemove", (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mouseWorld.x = ((e.clientX - rect.left) / rect.width) * WORLD_W;
+            this.mouseWorld.y = ((e.clientY - rect.top) / rect.height) * WORLD_H;
+          });
+
+          this.canvas.addEventListener("mousedown", (e) => {
+            unlockAudio();
+            if (e.button !== 0) return;
+
+            const rect = this.canvas.getBoundingClientRect();
+            const wx = ((e.clientX - rect.left) / rect.width) * WORLD_W;
+            const wy = ((e.clientY - rect.top) / rect.height) * WORLD_H;
+            this.mouseWorld.x = wx;
+            this.mouseWorld.y = wy;
+
+            // Check if player clicked on a nearby highlighted hotspot
+            const hotspots = getChapterHotspots(this.state.chapter, this.state.flags);
+            for (const h of hotspots) {
+              const insideBox = Math.abs(wx - h.x) <= h.w * 0.65 && Math.abs(wy - h.y) <= h.h * 0.65;
+              const inRange = Math.abs(this.state.detective.x - h.x) <= h.range + 16;
+              if (insideBox && inRange) {
+                this.interactWith(h);
+                return;
+              }
+            }
+          });
+
+          this.dom.dialogueText.addEventListener("click", () => {
+            unlockAudio();
+            if (!this.dialogue.open) return;
+            if (this.dialogue.typing) {
+              this.finishTyping();
+            } else if (!this.dialogue.choices || this.dialogue.choices.length === 0) {
+              this.closeDialogue();
+            }
+          });
+
+          this.dom.dialogueHint.addEventListener("click", () => {
+            if (this.dialogue.typing) this.finishTyping();
+            else if (!this.dialogue.choices || this.dialogue.choices.length === 0) this.closeDialogue();
+          });
+
+          this.dom.audioBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this.sound.toggleMute();
+          });
+
+          this.dom.restartBtn.addEventListener("click", () => {
+            this.resetGame();
+          });
+        }
+
+        openDialogue(node) {
+          if (!node) return;
+          this.dialogue.open = true;
+          this.dialogue.fullText = node.text;
+          this.dialogue.visibleChars = 0;
+          this.dialogue.typing = true;
+          this.dialogue.choices = node.choices || null;
+          this.dialogue.target = node.target || "detective";
+          this.dialogue.autoCloseTimer = node.autoClose || 0;
+
+          this.dom.dialogueSpeaker.textContent = node.speaker || "کارآگاه مانی";
+          this.dom.dialogueText.textContent = "";
+          this.dom.dialogueChoices.innerHTML = "";
+          this.dom.dialogueHint.textContent = "...";
+          this.dom.dialoguePanel.classList.add("open");
+          this.updateThoughtBubblePosition();
+        }
+
+        updateThoughtBubblePosition() {
+          if (!this.dialogue.open) return;
+          const det = this.state.detective;
+          let wx = det.x;
+          let wy = det.y - 40;
+          if (this.dialogue.target === "cat" && this.state.chapter === 1) {
+            wx = (this.state.flags.catChecked ? 302 : 284) + 3;
+            wy = 104;
+          }
+
+          const stageW = this.dom.stage.clientWidth || 960;
+          const stageH = this.dom.stage.clientHeight || 540;
+          const bubbleW = Math.max(155, this.dom.dialoguePanel.offsetWidth || 220);
+
+          const rawPxX = (wx / WORLD_W) * stageW;
+          const margin = bubbleW * 0.5 + 14;
+          const clampedPxX = Math.max(margin, Math.min(stageW - margin, rawPxX));
+          const tailOffset = Math.max(-bubbleW * 0.36, Math.min(bubbleW * 0.36, rawPxX - clampedPxX));
+
+          const topPx = Math.max(120, (wy / WORLD_H) * stageH - 22);
+          this.dom.dialoguePanel.style.left = `${clampedPxX.toFixed(1)}px`;
+          this.dom.dialoguePanel.style.top = `${topPx.toFixed(1)}px`;
+          if (this.dom.thoughtTail) {
+            this.dom.thoughtTail.style.transform = `translateX(calc(-50% + ${tailOffset.toFixed(1)}px))`;
+          }
+        }
+
+        finishTyping() {
+          this.dialogue.visibleChars = this.dialogue.fullText.length;
+          this.dialogue.typing = false;
+          this.dom.dialogueText.textContent = this.dialogue.fullText;
+          this.renderDialogueChoices();
+          this.updateThoughtBubblePosition();
+        }
+
+        renderDialogueChoices() {
+          this.dom.dialogueChoices.innerHTML = "";
+          if (this.dialogue.choices && this.dialogue.choices.length > 0) {
+            this.dom.dialogueHint.textContent = "[۱ یا ۲]";
+            this.dialogue.choices.forEach((ch, idx) => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "choice-btn";
+              btn.innerHTML = `<span class="choice-num">${idx === 0 ? "۱." : "۲."}</span><span>${ch.text}</span>`;
+              btn.addEventListener("click", () => this.selectChoice(idx));
+              this.dom.dialogueChoices.appendChild(btn);
+            });
+          } else {
+            this.dom.dialogueHint.textContent = "[Space] ×";
+          }
+        }
+
+        selectChoice(index) {
+          if (!this.dialogue.choices || !this.dialogue.choices[index]) return;
+          const choice = this.dialogue.choices[index];
+          const nextNode = choice.action ? choice.action() : null;
+          if (nextNode) {
+            this.openDialogue(nextNode);
+          } else {
+            this.closeDialogue();
+          }
+        }
+
+        closeDialogue() {
+          this.dialogue.open = false;
+          this.dialogue.typing = false;
+          this.dialogue.choices = null;
+          this.dom.dialoguePanel.classList.remove("open");
+        }
+
+        interactWith(hotspot) {
+          this.state.detective.anim = "inspect";
+          this.state.detective.facing = hotspot.x >= this.state.detective.x ? 1 : -1;
+          const script = buildDialogueScript(hotspot.id, this);
+          if (script) this.openDialogue(script);
+        }
+
+        triggerDoorReveal(checkedLockFirst = false) {
+          this.state.flags.doorUnlocked = true;
+          this.sound.playDoorUnlock();
+          this.showToast("قفل الکترونیکی مغازه باز شد!");
+
+          const prefix = checkedLockFirst
+            ? "قفل خط و خش نداره؛ با کارت دوم اومدن تو. "
+            : "";
+
+          return {
+            speaker: "کشف نهایی",
+            text: prefix + "ضبط‌صوت رو ساعت ۱۲ ایستاده! ساعت‌ساز صحنه‌سازی کرده تا قاچاق صاحب مغازه لو بره!",
+            choices: [
+              {
+                text: "ضبط نوار و تحویل پرونده",
+                action: () => {
+                  this.finishCase("با ضبط نوار صوتی داخل امانت‌فروشی و ضمیمه‌کردن کارت کلید، همدستی مالک مغازه و سرقت ساختگی افشا شد. برف سرد شهر این‌بار نتوانست حقیقت را دفن کند.");
+                  return null;
+                }
+              },
+              {
+                text: "تعقیب ردپا از در پشتی",
+                action: () => {
+                  this.finishCase("ردپای تازه در برف خروجی پشتی و رسید صندوق شماره ۷، مسیر مستقیم مخفیگاه ساعت‌ساز و مالک فراری را فاش کرد. پرونده پیش از سپیده‌دم بسته شد.");
+                  return null;
+                }
+              }
+            ]
+          };
+        }
+
+        finishCase(summaryText) {
+          this.state.flags.caseClosed = true;
+          this.completeObjective("obj3");
+          this.sound.playClueChime();
+          this.closeDialogue();
+          this.dom.epilogueSummary.textContent = summaryText;
+          const toFa = (n) => String(n).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+          this.dom.epilogueClues.textContent = `مدارک جمع‌آوری‌شده: ${toFa(this.state.inventory.length)} از ${toFa(Object.keys(CLUE_META).length)}`;
+          this.dom.epilogue.classList.add("show");
+        }
+
+        addClue(id) {
+          if (this.state.inventory.includes(id)) return;
+          this.state.inventory.push(id);
+          this.sound.playClueChime();
+          const meta = CLUE_META[id];
+          if (meta) {
+            this.showToast(`مدرک جدید ثبت شد: ${meta.label}`);
+          }
+          this.updateHUD();
+        }
+
+        completeObjective(key) {
+          if (this.state.objectives[key]) return;
+          this.state.objectives[key] = true;
+          this.updateHUD();
+        }
+
+        showToast(msg) {
+          this.dom.toast.textContent = msg;
+          this.dom.toast.classList.add("show");
+          clearTimeout(this.toastTimer);
+          this.toastTimer = setTimeout(() => {
+            this.dom.toast.classList.remove("show");
+          }, 3000);
+        }
+
+        updateHUD() {
+          this.dom.chapterLabel.textContent =
+            this.state.chapter === 1 ? "فصل ۱ · کوچه برفی" : "فصل ۲ · ورودی مغازه مشکوک";
+
+          // Objectives list
+          let doneCount = 0;
+          const keys = ["obj1", "obj2", "obj3"];
+          let foundActive = false;
+          this.dom.objItems.forEach((el, idx) => {
+            const k = keys[idx];
+            const isDone = this.state.objectives[k];
+            if (isDone) doneCount++;
+            el.classList.toggle("done", isDone);
+            if (!isDone && !foundActive) {
+              el.classList.add("active");
+              foundActive = true;
+            } else {
+              el.classList.remove("active");
+            }
+          });
+          const persianNums = ["۰", "۱", "۲", "۳"];
+          this.dom.objCounter.textContent = `${persianNums[doneCount]} از ۳`;
+
+          // Minimal Evidence Strip
+          const allKeys = Object.keys(CLUE_META);
+          this.dom.invSlots.innerHTML = "";
+          allKeys.forEach((id, idx) => {
+            const meta = CLUE_META[id];
+            const collected = this.state.inventory.includes(id);
+            const slot = document.createElement("div");
+            slot.className = "inv-slot" + (collected ? " collected" : "");
+            if (collected) {
+              slot.innerHTML = `<span class="inv-icon">${meta.icon}</span><span>${meta.label}</span>`;
+              slot.title = meta.desc;
+              slot.addEventListener("click", () => {
+                this.openDialogue({
+                  speaker: `مدرک: ${meta.label}`,
+                  text: meta.desc
+                });
+              });
+            } else {
+              const faIdx = ["۱", "۲", "۳", "۴", "۵"][idx];
+              slot.innerHTML = `<span>${faIdx}</span>`;
+              slot.title = "مدرک کشف‌نشده";
+            }
+            this.dom.invSlots.appendChild(slot);
+          });
+        }
+
+        transitionToChapter(targetChapter, spawnX) {
+          if (this.state.transitioning) return;
+          this.state.transitioning = true;
+          this.closeDialogue();
+          this.dom.curtainText.textContent =
+            targetChapter === 2 ? "فصل ۲: ورودی مغازه مشکوک" : "فصل ۱: کوچه برفی";
+          this.dom.curtain.classList.add("active");
+
+          setTimeout(() => {
+            this.state.chapter = targetChapter;
+            this.state.detective.x = spawnX;
+            this.state.activeHotspot = null;
+            this.updateHUD();
+            setTimeout(() => {
+              this.dom.curtain.classList.remove("active");
+              this.state.transitioning = false;
+              if (targetChapter === 2 && !this.state.flags.hasKeycard && !this.state.flags.doorUnlocked) {
+                this.showToast("نکته: برای باز کردن در مغازه به کارت کلید کوچه نیاز دارید");
+              }
+            }, 240);
+          }, 340);
+        }
+
+        buildSceneLightsAndOccluders(time) {
+          const det = this.state.detective;
+          const flashDX = Math.cos(det.aimAngle);
+          const flashDY = Math.sin(det.aimAngle);
+
+          const flashlight = {
+            x: det.flashOriginX,
+            y: det.flashOriginY,
+            radius: 265,
+            r: 1.55, g: 1.46, b: 1.24,
+            dx: flashDX, dy: flashDY,
+            cosOuter: Math.cos(0.42),
+            cosInner: Math.cos(0.16),
+            softness: 11.0,
+            vol: 0.19
+          };
+
+          if (this.state.chapter === 1) {
+            const flicker = 0.88 + 0.12 * Math.sin(time * 9.3) * Math.sin(time * 23.7);
+            const occluders = [
+              { cx: 21, cy: 132, hw: 21, hh: 90 },    // Left brick alley wall
+              { cx: 244, cy: 205, hw: 16, hh: 17 },   // Wooden crate
+              { cx: 290, cy: 174, hw: 28, hh: 47 },   // Metal container
+              { cx: 378, cy: 206, hw: 10, hh: 16 },   // Alley trash barrel
+              { cx: 449, cy: 79, hw: 31, hh: 31 }     // Overhead archway brick lintel
+            ];
+            const lights = [
+              flashlight,
+              {
+                x: 205, y: 86, radius: 225,
+                r: 1.42 * flicker, g: 0.84 * flicker, b: 0.30 * flicker,
+                dx: 0, dy: 1,
+                cosOuter: Math.cos(1.08),
+                cosInner: Math.cos(0.55),
+                softness: 9.0,
+                vol: 0.11
+              },
+              {
+                x: 50, y: 126, radius: 135,
+                r: 0.28, g: 0.45, b: 0.82,
+                dx: 1, dy: 0.35,
+                cosOuter: -1.0, cosInner: -1.0,
+                softness: 6.0,
+                vol: 0.04
+              },
+              {
+                x: 472, y: 164, radius: 135,
+                r: 0.82, g: 0.24, b: 0.44,
+                dx: -1, dy: 0,
+                cosOuter: -1.0, cosInner: -1.0,
+                softness: 7.0,
+                vol: 0.06
+              }
+            ];
+            return { occluders, lights, ambient: [0.12, 0.15, 0.25] };
+          } else {
+            const flicker = 0.88 + 0.12 * Math.sin(time * 8.1) * Math.sin(time * 19.2);
+            const neonPulse = Math.sin(time * 14.0) * Math.sin(time * 37.0) > -0.82 ? 1.0 : 0.4;
+            const unlocked = this.state.flags.doorUnlocked;
+
+            const occluders = [
+              { cx: 22, cy: 152, hw: 22, hh: 70 },    // Left edge wall
+              { cx: 145, cy: 204, hw: 14, hh: 18 },   // Metal trash bin
+              { cx: 192, cy: 174, hw: 10, hh: 48 },   // Left shop brick pier
+              { cx: 290, cy: 176, hw: 14, hh: 46 },   // Pillar between window & door
+              { cx: 374, cy: 176, hw: 16, hh: 46 },   // Right shop brick pier
+              { cx: 438, cy: 190, hw: 14, hh: 32 }    // Utility meter box
+            ];
+
+            const lights = [
+              flashlight,
+              {
+                x: 84, y: 86, radius: 205,
+                r: 1.32 * flicker, g: 0.78 * flicker, b: 0.28 * flicker,
+                dx: 0, dy: 1,
+                cosOuter: Math.cos(1.05),
+                cosInner: Math.cos(0.52),
+                softness: 9.0,
+                vol: 0.10
+              },
+              {
+                x: 245, y: 92, radius: 195,
+                r: 0.24 * neonPulse, g: 0.92 * neonPulse, b: 0.90 * neonPulse,
+                dx: 0, dy: 1,
+                cosOuter: Math.cos(1.25),
+                cosInner: Math.cos(0.45),
+                softness: 6.5,
+                vol: 0.08
+              },
+              {
+                x: 325, y: 92, radius: 185,
+                r: 1.05 * neonPulse, g: 0.24 * neonPulse, b: 0.48 * neonPulse,
+                dx: 0, dy: 1,
+                cosOuter: Math.cos(1.25),
+                cosInner: Math.cos(0.45),
+                softness: 6.5,
+                vol: 0.08
+              },
+              {
+                x: 331, y: 152,
+                radius: unlocked ? 205 : 95,
+                r: unlocked ? 1.15 : 0.26,
+                g: unlocked ? 0.68 : 0.34,
+                b: unlocked ? 0.32 : 0.56,
+                dx: 0, dy: 0.7,
+                cosOuter: -1.0, cosInner: -1.0,
+                softness: 10.0,
+                vol: unlocked ? 0.14 : 0.03
+              }
+            ];
+            return { occluders, lights, ambient: [0.11, 0.14, 0.24] };
+          }
+        }
+
+        update(dt, time) {
+          const det = this.state.detective;
+
+          // 1. Typewriter progression
+          if (this.dialogue.open && this.dialogue.typing) {
+            this.dialogue.visibleChars += dt * 62;
+            const count = Math.floor(this.dialogue.visibleChars);
+            if (count >= this.dialogue.fullText.length) {
+              this.finishTyping();
+            } else {
+              const slice = this.dialogue.fullText.slice(0, count);
+              if (slice !== this.dom.dialogueText.textContent) {
+                this.dom.dialogueText.textContent = slice;
+                this.sound.playTypeClick();
+              }
+            }
+          } else if (this.dialogue.open && this.dialogue.autoCloseTimer > 0 && !this.dialogue.choices) {
+            this.dialogue.autoCloseTimer -= dt;
+            if (this.dialogue.autoCloseTimer <= 0) {
+              this.closeDialogue();
+            }
+          }
+
+          // 2. Detective movement (lock movement only when awaiting a choice menu)
+          const awaitingChoice = this.dialogue.open && this.dialogue.choices && this.dialogue.choices.length > 0;
+          let move = 0;
+          if (!this.state.transitioning && !awaitingChoice && !this.state.flags.caseClosed) {
+            if (this.keys.has("KeyA") || this.keys.has("ArrowLeft")) move -= 1;
+            if (this.keys.has("KeyD") || this.keys.has("ArrowRight")) move += 1;
+          }
+
+          if (move !== 0) {
+            // Dismiss passive narration smoothly when player starts walking
+            if (this.dialogue.open && !this.dialogue.choices && !this.dialogue.typing) {
+              this.closeDialogue();
+            }
+            det.vx = move * 78;
+            det.x += det.vx * dt;
+            det.anim = "walk";
+            det.walkPhase += dt * 11.5;
+            det.frame = Math.floor(det.walkPhase) % 6;
+
+            if ((det.frame === 1 || det.frame === 4) && det.frame !== det.lastStepFrame) {
+              det.lastStepFrame = det.frame;
+              this.sound.playSnowStep();
+              this.renderer.spawnSnowKick(det.x, det.y, move);
+            }
+          } else {
+            det.vx = 0;
+            if (det.anim !== "inspect" || !this.dialogue.open) {
+              det.anim = "idle";
+            }
+            det.lastStepFrame = -1;
+          }
+
+          // Clamp / scene boundary transitions
+          if (this.state.chapter === 1) {
+            if (det.x < 54) det.x = 54;
+            if (det.x >= 456) {
+              this.transitionToChapter(2, 38);
+            }
+          } else {            if (det.x <= 22) {
+              this.transitionToChapter(1, 438);
+            }
+            if (det.x > 412) det.x = 412;
+          }
+
+          // 3. Aim flashlight smoothly toward mouse cursor
+          const shoulderX = det.x + det.facing * 2;
+          const shoulderY = det.y - 19;
+          const aimDX = this.mouseWorld.x - shoulderX;
+          const aimDY = this.mouseWorld.y - shoulderY;
+          det.aimAngle = Math.atan2(aimDY, aimDX);
+          if (Math.abs(aimDX) > 6) {
+            det.facing = aimDX >= 0 ? 1 : -1;
+          }
+
+          // Cat perks up if detective gets close or shines flashlight at it in Ch1
+          if (this.state.chapter === 1) {
+            const catX = this.state.flags.catChecked ? 302 : 284;
+            const distCat = Math.hypot(det.x - catX, det.y - 125);
+            const dxFlash = catX - det.flashOriginX;
+            const dyFlash = 118 - det.flashOriginY;
+            const dFlash = Math.hypot(dxFlash, dyFlash);
+            const dotFlash = (dxFlash * Math.cos(det.aimAngle) + dyFlash * Math.sin(det.aimAngle)) / Math.max(1, dFlash);
+            this.state.catAlert = distCat < 128 || (dFlash < 220 && dotFlash > 0.9);
+            this.state.catChecked = this.state.flags.catChecked;
+          }
+
+          // 4. Hotspot proximity detection & floating world prompt
+          const hotspots = getChapterHotspots(this.state.chapter, this.state.flags);
+          let best = null;
+          let bestDist = Infinity;
+          for (const h of hotspots) {
+            const d = Math.abs(det.x - h.x);
+            if (d <= h.range && d < bestDist) {
+              best = h;
+              bestDist = d;
+            }
+          }
+          this.state.activeHotspot = best;
+          this.updateWorldPrompt(best);
+          this.updateThoughtBubblePosition();
+
+          // 5. Particles
+          this.renderer.updateParticles(dt, det, time);
+        }
+
+        updateWorldPrompt(hotspot) {
+          if (this.dialogue.open || this.state.transitioning || this.state.flags.caseClosed) {
+            if (this.dom.prompts.firstChild) this.dom.prompts.innerHTML = "";
+            return;
+          }
+
+          let target = hotspot;
+          let isExitCue = false;
+          if (!target) {
+            const dx = this.state.detective.x;
+            if (this.state.chapter === 1 && dx >= 385) {
+              target = { id: "exit_ch2", x: 438, y: 162, h: 36, label: "ورود به خیابان مغازه" };
+              isExitCue = true;
+            } else if (this.state.chapter === 2 && dx <= 62) {
+              target = { id: "exit_ch1", x: 42, y: 162, h: 36, label: "بازگشت به کوچه برفی" };
+              isExitCue = true;
+            }
+          }
+
+          if (!target) {
+            if (this.dom.prompts.firstChild) this.dom.prompts.innerHTML = "";
+            return;
+          }
+
+          const leftPct = (target.x / WORLD_W) * 100;
+          const topPct = (Math.max(26, target.y - target.h * 0.5 - 6) / WORLD_H) * 100;
+
+          let pill = this.dom.prompts.firstElementChild;
+          if (!pill) {
+            pill = document.createElement("div");
+            pill.className = "world-prompt";
+            this.dom.prompts.appendChild(pill);
+          }
+          pill.style.left = `${leftPct.toFixed(2)}%`;
+          pill.style.top = `${topPct.toFixed(2)}%`;
+          const keyAttr = target.id;
+          if (pill.dataset.hid !== keyAttr) {
+            pill.dataset.hid = keyAttr;
+            if (isExitCue) {
+              const keyTxt = target.id === "exit_ch2" ? "D" : "A";
+              pill.innerHTML = `<span class="key-badge">${keyTxt}</span><span>${target.label}</span>`;
+            } else {
+              pill.innerHTML = `<span class="key-badge">E</span><span>بررسی: ${target.label}</span>`;
+            }
+          }
+        }
+
+        loop(now) {
+          const dt = Math.min(0.05, Math.max(0.001, (now - this.lastTime) / 1000));
+          this.lastTime = now;
+          this.elapsed += dt;
+
+          this.update(dt, this.elapsed);
+
+          const { occluders, lights, ambient } = this.buildSceneLightsAndOccluders(this.elapsed);
+          this.renderer.renderScene(this.state, this.elapsed, lights);
+          this.lighting.render(
+            this.renderer.sceneCanvas,
+            this.renderer.emissiveCanvas,
+            occluders,
+            lights,
+            ambient,
+            this.elapsed
+          );
+
+          requestAnimationFrame((t) => this.loop(t));
+        }
+      }
+
+      // Immediate boot on load — zero blank screens
+      window.addEventListener("DOMContentLoaded", () => {
+        window.__SHADOW_SECRETS__ = new MysteryGame();
+      });
+    })();
+  </script>
+</body>
+</html>
